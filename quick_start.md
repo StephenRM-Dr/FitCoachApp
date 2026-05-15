@@ -1,199 +1,52 @@
-# 🚀 Quick Start - FitCoach Monorepo
-
-## ¿Qué es esto?
-
-Una **aplicación móvil completa** de gestión de entrenamiento personal construida como **monorepo modular**.
+# 🚀 Quick Start - FitCoach Pro
 
 ## 🎯 Lo que tienes ahora
+- Un proyecto consolidado con **backend robusto en Laravel** y una **app móvil reactiva en Expo**.
+- **Gestión Multi-Rol:** Inicia sesión como *Entrenador* para gestionar clientes o como *Asesorado* para ver tu progreso.
 
-```
-✅ Monorepo configurado con pnpm workspaces
-✅ Mobile app funcional con 5 pantallas
-✅ 3 packages compartidos (ui, types, utils)
-✅ Arquitectura escalable y mantenible
-✅ Sistema de diseño mobile-first
-```
+## 🛠️ Puesta en Marcha (Paso a Paso)
 
-## 📱 Mobile App (Cliente)
-
-### Pantallas Disponibles
-
-1. **🏠 Home** - Dashboard con resumen
-   - Racha actual y sesiones del mes
-   - Próxima sesión programada
-   - Progreso semanal
-   - Últimas marcas personales
-
-2. **💪 Workouts** - Rutinas de entrenamiento
-   - Sesiones programadas
-   - Historial de entrenamientos
-   - 5 métodos: LISS, HIT, AMRAP, EMOM, Fuerza
-
-3. **📈 Progress** - Seguimiento de evolución
-   - Gráfica de peso
-   - Marcas personales (1RM)
-   - Medidas corporales
-   - Estadísticas de mejora
-
-4. **🥗 Nutrition** - Plan nutricional
-   - Cálculo de calorías (TDEE)
-   - Distribución de macros
-   - Checklist de hábitos
-   - Adherencia semanal
-
-5. **👤 Profile** - Perfil de usuario
-   - Información personal
-   - Estado de suscripción
-   - Configuración
-   - Mi entrenador
-
-## 📦 Packages Compartidos
-
-### @fitcoach/ui
-Componentes reutilizables:
-```tsx
-<Button variant="primary">Click me</Button>
-<Card padding="md">Content</Card>
-<StatCard label="Peso" value="78kg" />
-<BottomNav items={[...]} />
-```
-
-### @fitcoach/types
-Tipos TypeScript:
-```typescript
-Cliente, Sesion, Ejercicio,
-Antropometria, DatosNutricionales...
-```
-
-### @fitcoach/utils
-Funciones útiles:
-```typescript
-calcularIMC(peso, altura)
-calcularTMB(peso, altura, edad)
-calcular1RM(peso, reps)
-```
-
-## 🎨 Diseño Mobile-First
-
-### Bottom Navigation
-```
-┌─────────────────────────────┐
-│                             │
-│      Contenido App          │
-│                             │
-└─────────────────────────────┘
-┌──┬────┬────┬────┬──────────┐
-│🏠│ 💪 │ 📈 │ 🥗 │    👤    │
-└──┴────┴────┴────┴──────────┘
-```
-
-### Colores Semánticos
-- 🔵 Blue: Primario, info
-- 🟢 Green: Éxito, progreso positivo
-- 🟣 Purple: Premium, destacado
-- 🔴 Red: Alertas, errores
-- 🟠 Orange: Racha, motivación
-
-## 🛠️ Comandos Rápidos
-
+### 1. Levantar el Backend (API)
+Abre tu terminal y navega al directorio del backend:
 ```bash
-# Ver la app
-pnpm dev
+cd backend
+# Instala las dependencias de PHP
+composer install
 
-# Instalar deps
-pnpm install
+# Configura tu entorno
+cp .env.example .env
+php artisan key:generate
 
-# Build todo
-pnpm build
+# Crea la base de datos MySQL (Asegúrate de tener un gestor como XAMPP/Laragon corriendo)
+php artisan migrate
 
-# Agregar dep a mobile
-pnpm --filter @fitcoach/mobile add nombre-package
+# Inicia el servidor
+php artisan serve
 ```
+El backend estará escuchando en `http://127.0.0.1:8000`.
 
-## 📂 Estructura Importante
-
-```
-src/app/           → App principal (apunta a mobile)
-apps/mobile/       → Código de la mobile app
-packages/ui/       → Componentes compartidos
-packages/types/    → Tipos TypeScript
-packages/utils/    → Utilidades
-```
-
-## 🔗 Cómo usar los Packages
-
-En cualquier archivo de `apps/mobile`:
-
-```typescript
-// Importar componentes
-import { Button, Card } from '@fitcoach/ui';
-
-// Importar tipos
-import { Cliente, Sesion } from '@fitcoach/types';
-
-// Importar utils
-import { calcularIMC } from '@fitcoach/utils';
-
-// Usar normalmente
-const imc = calcularIMC(78.8, 175);
-```
-
-## 🎯 Próximos Pasos Sugeridos
-
-### Desarrollo Inmediato
-1. ✅ Explorar la mobile app
-2. ✅ Entender los packages compartidos
-3. ⬜ Agregar nuevos componentes a @fitcoach/ui
-4. ⬜ Conectar con Supabase (backend)
-
-### Expansión
-5. ⬜ Crear `apps/trainer` (dashboard entrenador)
-6. ⬜ Agregar autenticación
-7. ⬜ Implementar push notifications
-8. ⬜ Modo offline
-
-## 📚 Documentación
-
-- `README.md` - Visión general del proyecto
-- `ARCHITECTURE.md` - Arquitectura completa y detallada
-- `MONOREPO.md` - Guía completa del monorepo
-- `QUICK_START.md` - Este archivo
-
-## 🆘 Necesitas Ayuda?
-
-### Ver estructura
+### 2. Exponer el Backend (Ngrok)
+Como vas a testear en un móvil o simulador que requiere una red externa, expón tu local:
 ```bash
-tree -L 3 -I 'node_modules'
+ngrok http 8000
 ```
+Copia la URL `https://...ngrok-free.app` que te provea la consola.
 
-### Ver dependencias
+### 3. Levantar la Mobile App
+Abre una **segunda terminal**, navega a la carpeta móvil y edita las variables de entorno:
 ```bash
-pnpm list --depth 0
+cd mobile
+
+# Crea el archivo de variables (si no existe) y agrega la URL de ngrok
+echo "EXPO_PUBLIC_API_URL=https://tu-url-de-ngrok.app/api/v1" > .env
+
+# Instala dependencias y corre Expo
+npm install
+npx expo start
 ```
 
-### Reinstalar todo
-```bash
-rm -rf node_modules packages/*/node_modules apps/*/node_modules
-pnpm install
-```
+Escanea el código QR en tu dispositivo con Expo Go o presiona `a` para abrir el emulador de Android.
 
-## 💡 Tips
-
-1. **Cambios en packages**: Se reflejan automáticamente en las apps
-2. **TypeScript errors**: Aparecen inmediatamente en toda la codebase
-3. **Hot reload**: Funciona en todo el monorepo
-4. **Imports**: Usa los aliases `@fitcoach/*` siempre
-
-## 🎉 ¡Ya está todo listo!
-
-Tu monorepo está 100% funcional. Solo ejecuta:
-
-```bash
-pnpm dev
-```
-
-Y empieza a desarrollar! 🚀
-
----
-
-**¿Preguntas?** Lee `ARCHITECTURE.md` para detalles técnicos o `MONOREPO.md` para entender el sistema de workspaces.
+## 🎨 Desarrollo y Contribución
+- Para editar la API: Trabaja dentro de `backend/app/Http/Controllers`.
+- Para editar Pantallas: Trabaja dentro de `mobile/src/screens/`.
