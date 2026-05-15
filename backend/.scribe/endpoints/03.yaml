@@ -1,0 +1,312 @@
+name: 'Alumno - Entrenamiento'
+description: ''
+endpoints:
+  -
+    custom: []
+    httpMethods:
+      - GET
+    uri: api/v1/client/programs/active
+    metadata:
+      custom: []
+      groupName: 'Alumno - Entrenamiento'
+      groupDescription: ''
+      subgroup: ''
+      subgroupDescription: ''
+      title: 'Obtener programa activo'
+      description: ''
+      authenticated: true
+      deprecated: false
+    headers:
+      Content-Type: application/json
+      Accept: application/json
+    urlParameters: []
+    cleanUrlParameters: []
+    queryParameters: []
+    cleanQueryParameters: []
+    bodyParameters: []
+    cleanBodyParameters: []
+    fileParameters: []
+    responses:
+      -
+        custom: []
+        status: 401
+        content: '{"message":"Unauthenticated."}'
+        headers:
+          cache-control: 'no-cache, private'
+          content-type: application/json
+          access-control-allow-origin: '*'
+        description: null
+    responseFields: []
+    auth: []
+    controller: null
+    method: null
+    route: null
+  -
+    custom: []
+    httpMethods:
+      - GET
+    uri: 'api/v1/client/sessions/{sessionId}'
+    metadata:
+      custom: []
+      groupName: 'Alumno - Entrenamiento'
+      groupDescription: ''
+      subgroup: ''
+      subgroupDescription: ''
+      title: 'Obtener sesión de hoy'
+      description: ''
+      authenticated: true
+      deprecated: false
+    headers:
+      Content-Type: application/json
+      Accept: application/json
+    urlParameters:
+      sessionId:
+        custom: []
+        name: sessionId
+        description: 'The ID of the session.'
+        required: true
+        example: 16
+        type: integer
+        enumValues: []
+        exampleWasSpecified: false
+        nullable: false
+        deprecated: false
+    cleanUrlParameters:
+      sessionId: 16
+    queryParameters: []
+    cleanQueryParameters: []
+    bodyParameters: []
+    cleanBodyParameters: []
+    fileParameters: []
+    responses:
+      -
+        custom: []
+        status: 401
+        content: '{"message":"Unauthenticated."}'
+        headers:
+          cache-control: 'no-cache, private'
+          content-type: application/json
+          access-control-allow-origin: '*'
+        description: null
+    responseFields: []
+    auth: []
+    controller: null
+    method: null
+    route: null
+  -
+    custom: []
+    httpMethods:
+      - POST
+    uri: api/v1/client/executions
+    metadata:
+      custom: []
+      groupName: 'Alumno - Entrenamiento'
+      groupDescription: ''
+      subgroup: ''
+      subgroupDescription: ''
+      title: 'Guardar ejecución de rutina'
+      description: ''
+      authenticated: true
+      deprecated: false
+    headers:
+      Content-Type: application/json
+      Accept: application/json
+    urlParameters: []
+    cleanUrlParameters: []
+    queryParameters: []
+    cleanQueryParameters: []
+    bodyParameters:
+      workout_session_id:
+        custom: []
+        name: workout_session_id
+        description: 'The <code>id</code> of an existing record in the workout_sessions table.'
+        required: true
+        example: architecto
+        type: string
+        enumValues: []
+        exampleWasSpecified: false
+        nullable: false
+        deprecated: false
+      session_rpe:
+        custom: []
+        name: session_rpe
+        description: ''
+        required: false
+        example: 16
+        type: integer
+        enumValues: []
+        exampleWasSpecified: false
+        nullable: true
+        deprecated: false
+      notes:
+        custom: []
+        name: notes
+        description: ''
+        required: false
+        example: architecto
+        type: string
+        enumValues: []
+        exampleWasSpecified: false
+        nullable: true
+        deprecated: false
+      started_at:
+        custom: []
+        name: started_at
+        description: 'Must be a valid date.'
+        required: false
+        example: '2026-05-14T20:34:33'
+        type: string
+        enumValues: []
+        exampleWasSpecified: false
+        nullable: true
+        deprecated: false
+      completed_at:
+        custom: []
+        name: completed_at
+        description: 'Must be a valid date.'
+        required: false
+        example: '2026-05-14T20:34:33'
+        type: string
+        enumValues: []
+        exampleWasSpecified: false
+        nullable: true
+        deprecated: false
+      sets:
+        custom: []
+        name: sets
+        description: ''
+        required: true
+        example:
+          - []
+        type: 'object[]'
+        enumValues: []
+        exampleWasSpecified: false
+        nullable: false
+        deprecated: false
+      'sets[].exercise_id':
+        custom: []
+        name: 'sets[].exercise_id'
+        description: 'The <code>id</code> of an existing record in the exercises table.'
+        required: true
+        example: architecto
+        type: string
+        enumValues: []
+        exampleWasSpecified: false
+        nullable: false
+        deprecated: false
+      'sets[].set_number':
+        custom: []
+        name: 'sets[].set_number'
+        description: ''
+        required: true
+        example: 16
+        type: integer
+        enumValues: []
+        exampleWasSpecified: false
+        nullable: false
+        deprecated: false
+      'sets[].weight_kg':
+        custom: []
+        name: 'sets[].weight_kg'
+        description: ''
+        required: false
+        example: 4326.41688
+        type: number
+        enumValues: []
+        exampleWasSpecified: false
+        nullable: true
+        deprecated: false
+      'sets[].reps_performed':
+        custom: []
+        name: 'sets[].reps_performed'
+        description: ''
+        required: false
+        example: 16
+        type: integer
+        enumValues: []
+        exampleWasSpecified: false
+        nullable: true
+        deprecated: false
+      'sets[].rpe':
+        custom: []
+        name: 'sets[].rpe'
+        description: ''
+        required: false
+        example: 16
+        type: integer
+        enumValues: []
+        exampleWasSpecified: false
+        nullable: true
+        deprecated: false
+      'sets[].rir':
+        custom: []
+        name: 'sets[].rir'
+        description: ''
+        required: false
+        example: 16
+        type: integer
+        enumValues: []
+        exampleWasSpecified: false
+        nullable: true
+        deprecated: false
+    cleanBodyParameters:
+      workout_session_id: architecto
+      session_rpe: 16
+      notes: architecto
+      started_at: '2026-05-14T20:34:33'
+      completed_at: '2026-05-14T20:34:33'
+      sets:
+        -
+          exercise_id: architecto
+          set_number: 16
+          weight_kg: 4326.41688
+          reps_performed: 16
+          rpe: 16
+          rir: 16
+    fileParameters: []
+    responses: []
+    responseFields: []
+    auth: []
+    controller: null
+    method: null
+    route: null
+  -
+    custom: []
+    httpMethods:
+      - GET
+    uri: api/v1/client/executions/history
+    metadata:
+      custom: []
+      groupName: 'Alumno - Entrenamiento'
+      groupDescription: ''
+      subgroup: ''
+      subgroupDescription: ''
+      title: 'Historial de ejecuciones'
+      description: ''
+      authenticated: true
+      deprecated: false
+    headers:
+      Content-Type: application/json
+      Accept: application/json
+    urlParameters: []
+    cleanUrlParameters: []
+    queryParameters: []
+    cleanQueryParameters: []
+    bodyParameters: []
+    cleanBodyParameters: []
+    fileParameters: []
+    responses:
+      -
+        custom: []
+        status: 401
+        content: '{"message":"Unauthenticated."}'
+        headers:
+          cache-control: 'no-cache, private'
+          content-type: application/json
+          access-control-allow-origin: '*'
+        description: null
+    responseFields: []
+    auth: []
+    controller: null
+    method: null
+    route: null
