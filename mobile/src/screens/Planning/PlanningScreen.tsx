@@ -1,75 +1,105 @@
-import React, { useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator, Modal, TextInput, Alert } from 'react-native';
-import { Calendar, ChevronRight, Plus } from 'lucide-react-native';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useNavigation } from '@react-navigation/native';
-import { coachService } from '../../services/coachService';
-import { Colors, Spacing, BorderRadius, Typography } from '../../theme';
-import { Program } from '../../types';
+import React, { useState } from "react";
+import {
+  View,
+  Text,
+  ScrollView,
+  StyleSheet,
+  TouchableOpacity,
+  ActivityIndicator,
+  Modal,
+  TextInput,
+  Alert,
+} from "react-native";
+import { Calendar, ChevronRight, Plus } from "lucide-react-native";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useNavigation } from "@react-navigation/native";
+import { coachService } from "../../services/coachService";
+import { Colors, Spacing, BorderRadius, Typography } from "../../theme";
+import { Program } from "../../types";
 
 export function PlanningScreen() {
   const queryClient = useQueryClient();
   const navigation = useNavigation();
   const [selectedClientId, setSelectedClientId] = useState<number | null>(null);
-  
+
   // Modals visibility
   const [isProgramModalVisible, setIsProgramModalVisible] = useState(false);
   const [isMesocycleModalVisible, setIsMesocycleModalVisible] = useState(false);
 
   // Selected entities for creation
-  const [selectedProgramId, setSelectedProgramId] = useState<number | null>(null);
+  const [selectedProgramId, setSelectedProgramId] = useState<number | null>(
+    null,
+  );
 
   // Form states
-  const [newProgramName, setNewProgramName] = useState('');
-  const [newMesocycleName, setNewMesocycleName] = useState('');
-  const [startWeek, setStartWeek] = useState('1');
-  const [endWeek, setEndWeek] = useState('4');
+  const [newProgramName, setNewProgramName] = useState("");
+  const [newMesocycleName, setNewMesocycleName] = useState("");
+  const [startWeek, setStartWeek] = useState("1");
+  const [endWeek, setEndWeek] = useState("4");
 
   const [expandedMesoId, setExpandedMesoId] = useState<number | null>(null);
 
   const { data: myClients = [], isLoading: loadingClients } = useQuery({
-    queryKey: ['my-clients'],
+    queryKey: ["my-clients"],
     queryFn: () => coachService.getMyClients(),
   });
 
   const { data: programs = [], isLoading: loadingPrograms } = useQuery({
-    queryKey: ['client-programs', selectedClientId],
-    queryFn: () => selectedClientId ? coachService.getClientPrograms(selectedClientId) : Promise.resolve([]),
+    queryKey: ["client-programs", selectedClientId],
+    queryFn: () =>
+      selectedClientId
+        ? coachService.getClientPrograms(selectedClientId)
+        : Promise.resolve([]),
     enabled: !!selectedClientId,
   });
 
   const createProgramMutation = useMutation({
-    mutationFn: (name: string) => coachService.createProgram({ client_id: selectedClientId!, name, start_date: new Date().toISOString().split('T')[0] }),
+    mutationFn: (name: string) =>
+      coachService.createProgram({
+        client_id: selectedClientId!,
+        name,
+        start_date: new Date().toISOString().split("T")[0],
+      }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['client-programs', selectedClientId] });
+      queryClient.invalidateQueries({
+        queryKey: ["client-programs", selectedClientId],
+      });
       setIsProgramModalVisible(false);
-      setNewProgramName('');
-      Alert.alert('Éxito', 'Programa creado correctamente.');
+      setNewProgramName("");
+      Alert.alert("Éxito", "Programa creado correctamente.");
     },
-    onError: () => Alert.alert('Error', 'No se pudo crear el programa.')
+    onError: () => Alert.alert("Error", "No se pudo crear el programa."),
   });
 
   const createMesocycleMutation = useMutation({
-    mutationFn: (data: { name: string, start_week: number, end_week: number }) => 
-      coachService.createMesocycle(selectedProgramId!, data),
+    mutationFn: (data: {
+      name: string;
+      start_week: number;
+      end_week: number;
+    }) => coachService.createMesocycle(selectedProgramId!, data),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['client-programs', selectedClientId] });
+      queryClient.invalidateQueries({
+        queryKey: ["client-programs", selectedClientId],
+      });
       setIsMesocycleModalVisible(false);
-      setNewMesocycleName('');
-      setStartWeek('1');
-      setEndWeek('4');
-      Alert.alert('Éxito', 'Mesociclo creado correctamente.');
+      setNewMesocycleName("");
+      setStartWeek("1");
+      setEndWeek("4");
+      Alert.alert("Éxito", "Mesociclo creado correctamente.");
     },
-    onError: () => Alert.alert('Error', 'No se pudo crear el mesociclo.')
+    onError: () => Alert.alert("Error", "No se pudo crear el mesociclo."),
   });
 
   const createMicrocycleMutation = useMutation({
-    mutationFn: (mesocycleId: number) => coachService.createMicrocycle(mesocycleId, { week_number: 1 }),
+    mutationFn: (mesocycleId: number) =>
+      coachService.createMicrocycle(mesocycleId, { week_number: 1 }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['client-programs', selectedClientId] });
-      Alert.alert('Éxito', 'Microciclo creado correctamente.');
+      queryClient.invalidateQueries({
+        queryKey: ["client-programs", selectedClientId],
+      });
+      Alert.alert("Éxito", "Microciclo creado correctamente.");
     },
-    onError: () => Alert.alert('Error', 'No se pudo crear el microciclo.')
+    onError: () => Alert.alert("Error", "No se pudo crear el microciclo."),
   });
 
   const handleCreateProgram = () => {
@@ -82,13 +112,13 @@ export function PlanningScreen() {
     createMesocycleMutation.mutate({
       name: newMesocycleName,
       start_week: parseInt(startWeek),
-      end_week: parseInt(endWeek)
+      end_week: parseInt(endWeek),
     });
   };
 
   const handleAddSession = (microcycleId: number) => {
     // @ts-ignore
-    navigation.navigate('SessionBuilder', { microcycleId });
+    navigation.navigate("SessionBuilder", { microcycleId });
   };
 
   return (
@@ -103,28 +133,41 @@ export function PlanningScreen() {
 
       {/* Client Selector */}
       <View style={[styles.card, { marginBottom: Spacing.lg }]}>
-        <Text style={[Typography.label, { marginBottom: Spacing.sm }]}>Seleccionar Alumno</Text>
+        <Text style={[Typography.label, { marginBottom: Spacing.sm }]}>
+          Seleccionar Alumno
+        </Text>
         {loadingClients ? (
           <ActivityIndicator color={Colors.primary} />
         ) : (
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.clientRow}>
-            {myClients.map(client => (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.clientRow}
+          >
+            {myClients.map((client) => (
               <TouchableOpacity
                 key={client.id}
                 style={[
                   styles.clientPill,
-                  selectedClientId === client.id && styles.clientPillActive
+                  selectedClientId === client.id && styles.clientPillActive,
                 ]}
                 onPress={() => setSelectedClientId(client.id)}
               >
-                <Text style={[
-                  styles.clientPillText,
-                  selectedClientId === client.id && styles.clientPillTextActive
-                ]}>{client.name}</Text>
+                <Text
+                  style={[
+                    styles.clientPillText,
+                    selectedClientId === client.id &&
+                      styles.clientPillTextActive,
+                  ]}
+                >
+                  {client.name}
+                </Text>
               </TouchableOpacity>
             ))}
             {myClients.length === 0 && (
-              <Text style={[Typography.body, { color: Colors.textMuted }]}>No tienes alumnos asignados.</Text>
+              <Text style={[Typography.body, { color: Colors.textMuted }]}>
+                No tienes alumnos asignados.
+              </Text>
             )}
           </ScrollView>
         )}
@@ -136,44 +179,75 @@ export function PlanningScreen() {
           <ActivityIndicator color={Colors.primary} />
         ) : programs.length === 0 ? (
           <View style={styles.emptyState}>
-            <Text style={[Typography.body, { color: Colors.textMuted, marginBottom: Spacing.md }]}>
+            <Text
+              style={[
+                Typography.body,
+                { color: Colors.textMuted, marginBottom: Spacing.md },
+              ]}
+            >
               Este alumno no tiene programas activos.
             </Text>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.primaryButton}
               onPress={() => setIsProgramModalVisible(true)}
             >
               <Plus color={Colors.white} size={20} style={{ marginRight: 8 }} />
-              <Text style={styles.primaryButtonText}>Crear Programa Macrociclo</Text>
+              <Text style={styles.primaryButtonText}>
+                Crear Programa Macrociclo
+              </Text>
             </TouchableOpacity>
           </View>
         ) : (
-          programs.map(program => (
+          programs.map((program) => (
             <View key={program.id} style={{ marginBottom: Spacing.xl }}>
               <View style={[styles.cardRow, { marginBottom: Spacing.md }]}>
-                <Text style={[Typography.h4, { color: Colors.primary }]}>{program.name}</Text>
+                <Text style={[Typography.h4, { color: Colors.primary }]}>
+                  {program.name}
+                </Text>
                 <View style={[styles.badge, styles.badgeSuccess]}>
                   <Text style={styles.badgeText}>{program.status}</Text>
                 </View>
               </View>
 
-              <Text style={[Typography.label, { marginBottom: Spacing.sm }]}>Mesociclos</Text>
+              <Text style={[Typography.label, { marginBottom: Spacing.sm }]}>
+                Mesociclos
+              </Text>
               {program.mesocycles && program.mesocycles.length > 0 ? (
                 program.mesocycles.map((meso) => (
                   <View key={meso.id} style={{ marginBottom: Spacing.md }}>
-                    <TouchableOpacity 
-                      style={[styles.card, expandedMesoId === meso.id && styles.cardActive]}
-                      onPress={() => setExpandedMesoId(expandedMesoId === meso.id ? null : meso.id)}
+                    <TouchableOpacity
+                      style={[
+                        styles.card,
+                        expandedMesoId === meso.id && styles.cardActive,
+                      ]}
+                      onPress={() =>
+                        setExpandedMesoId(
+                          expandedMesoId === meso.id ? null : meso.id,
+                        )
+                      }
                     >
                       <View style={styles.cardRow}>
                         <View style={{ flex: 1 }}>
-                          <Text style={[Typography.body, { fontWeight: '700' }]}>{meso.name}</Text>
-                          <Text style={Typography.caption}>Semanas {meso.start_week}-{meso.end_week}</Text>
+                          <Text
+                            style={[Typography.body, { fontWeight: "700" }]}
+                          >
+                            {meso.name}
+                          </Text>
+                          <Text style={Typography.caption}>
+                            Semanas {meso.start_week}-{meso.end_week}
+                          </Text>
                         </View>
-                        <ChevronRight 
-                          color={Colors.textMuted} 
-                          size={18} 
-                          style={{ transform: [{ rotate: expandedMesoId === meso.id ? '90deg' : '0deg' }] }}
+                        <ChevronRight
+                          color={Colors.textMuted}
+                          size={18}
+                          style={{
+                            transform: [
+                              {
+                                rotate:
+                                  expandedMesoId === meso.id ? "90deg" : "0deg",
+                              },
+                            ],
+                          }}
                         />
                       </View>
                     </TouchableOpacity>
@@ -182,34 +256,64 @@ export function PlanningScreen() {
                     {expandedMesoId === meso.id && (
                       <View style={styles.expandedContent}>
                         {meso.microcycles && meso.microcycles.length > 0 ? (
-                          meso.microcycles.map(micro => (
+                          meso.microcycles.map((micro) => (
                             <View key={micro.id} style={styles.microCard}>
                               <View style={styles.cardRow}>
-                                <Text style={[Typography.label, { color: Colors.primary }]}>Microciclo {micro.week_number}</Text>
-                                <TouchableOpacity onPress={() => handleAddSession(micro.id)}>
+                                <Text
+                                  style={[
+                                    Typography.label,
+                                    { color: Colors.primary },
+                                  ]}
+                                >
+                                  Microciclo {micro.week_number}
+                                </Text>
+                                <TouchableOpacity
+                                  onPress={() => handleAddSession(micro.id)}
+                                >
                                   <Plus size={16} color={Colors.primary} />
                                 </TouchableOpacity>
                               </View>
-                              
-                              {micro.workout_sessions && micro.workout_sessions.length > 0 ? (
-                                micro.workout_sessions.map(session => (
-                                  <View key={session.id} style={styles.sessionItem}>
-                                    <Calendar size={14} color={Colors.textMuted} />
-                                    <Text style={styles.sessionItemText}>{session.name} ({session.day_of_week || 'N/A'})</Text>
+
+                              {micro.workout_sessions &&
+                              micro.workout_sessions.length > 0 ? (
+                                micro.workout_sessions.map((session) => (
+                                  <View
+                                    key={session.id}
+                                    style={styles.sessionItem}
+                                  >
+                                    <Calendar
+                                      size={14}
+                                      color={Colors.textMuted}
+                                    />
+                                    <Text style={styles.sessionItemText}>
+                                      {session.name} (
+                                      {session.day_of_week || "N/A"})
+                                    </Text>
                                   </View>
                                 ))
                               ) : (
-                                <Text style={Typography.caption}>Sin sesiones creadas.</Text>
+                                <Text style={Typography.caption}>
+                                  Sin sesiones creadas.
+                                </Text>
                               )}
                             </View>
                           ))
                         ) : (
-                          <View style={{ alignItems: 'center', padding: Spacing.md }}>
-                            <TouchableOpacity 
+                          <View
+                            style={{
+                              alignItems: "center",
+                              padding: Spacing.md,
+                            }}
+                          >
+                            <TouchableOpacity
                               style={styles.outlineButton}
-                              onPress={() => createMicrocycleMutation.mutate(meso.id)}
+                              onPress={() =>
+                                createMicrocycleMutation.mutate(meso.id)
+                              }
                             >
-                              <Text style={styles.outlineButtonText}>+ Crear Primer Microciclo</Text>
+                              <Text style={styles.outlineButtonText}>
+                                + Crear Primer Microciclo
+                              </Text>
                             </TouchableOpacity>
                           </View>
                         )}
@@ -218,11 +322,15 @@ export function PlanningScreen() {
                   </View>
                 ))
               ) : (
-                <Text style={[Typography.bodySmall, { color: Colors.textMuted }]}>Sin mesociclos definidos.</Text>
+                <Text
+                  style={[Typography.bodySmall, { color: Colors.textMuted }]}
+                >
+                  Sin mesociclos definidos.
+                </Text>
               )}
-              
+
               {/* Botón rápido para MVP */}
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.outlineButton}
                 onPress={() => {
                   setSelectedProgramId(program.id);
@@ -235,7 +343,16 @@ export function PlanningScreen() {
           ))
         )
       ) : (
-        <Text style={[Typography.body, { color: Colors.textMuted, textAlign: 'center', marginTop: Spacing.xl }]}>
+        <Text
+          style={[
+            Typography.body,
+            {
+              color: Colors.textMuted,
+              textAlign: "center",
+              marginTop: Spacing.xl,
+            },
+          ]}
+        >
           Selecciona un alumno para ver o crear su planificación.
         </Text>
       )}
@@ -244,9 +361,13 @@ export function PlanningScreen() {
       <Modal visible={isProgramModalVisible} transparent animationType="slide">
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <Text style={[Typography.h4, { marginBottom: Spacing.md }]}>Nuevo Macrociclo</Text>
-            
-            <Text style={[Typography.label, { marginBottom: Spacing.xs }]}>Nombre del Programa</Text>
+            <Text style={[Typography.h4, { marginBottom: Spacing.md }]}>
+              Nuevo Macrociclo
+            </Text>
+
+            <Text style={[Typography.label, { marginBottom: Spacing.xs }]}>
+              Nombre del Programa
+            </Text>
             <TextInput
               style={styles.input}
               placeholder="Ej. Preparación Fuerza Base"
@@ -256,14 +377,28 @@ export function PlanningScreen() {
             />
 
             <View style={[styles.cardRow, { marginTop: Spacing.lg }]}>
-              <TouchableOpacity 
-                style={[styles.primaryButton, { backgroundColor: Colors.bgElevated, flex: 1, marginRight: Spacing.sm }]}
+              <TouchableOpacity
+                style={[
+                  styles.primaryButton,
+                  {
+                    backgroundColor: Colors.bgElevated,
+                    flex: 1,
+                    marginRight: Spacing.sm,
+                  },
+                ]}
                 onPress={() => setIsProgramModalVisible(false)}
               >
-                <Text style={[styles.primaryButtonText, { color: Colors.textSecondary }]}>Cancelar</Text>
+                <Text
+                  style={[
+                    styles.primaryButtonText,
+                    { color: Colors.textSecondary },
+                  ]}
+                >
+                  Cancelar
+                </Text>
               </TouchableOpacity>
-              
-              <TouchableOpacity 
+
+              <TouchableOpacity
                 style={[styles.primaryButton, { flex: 1 }]}
                 onPress={handleCreateProgram}
                 disabled={createProgramMutation.isPending}
@@ -279,12 +414,20 @@ export function PlanningScreen() {
         </View>
       </Modal>
       {/* Modal Crear Mesociclo */}
-      <Modal visible={isMesocycleModalVisible} transparent animationType="slide">
+      <Modal
+        visible={isMesocycleModalVisible}
+        transparent
+        animationType="slide"
+      >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <Text style={[Typography.h4, { marginBottom: Spacing.md }]}>Nuevo Mesociclo</Text>
-            
-            <Text style={[Typography.label, { marginBottom: Spacing.xs }]}>Nombre</Text>
+            <Text style={[Typography.h4, { marginBottom: Spacing.md }]}>
+              Nuevo Mesociclo
+            </Text>
+
+            <Text style={[Typography.label, { marginBottom: Spacing.xs }]}>
+              Nombre
+            </Text>
             <TextInput
               style={styles.input}
               placeholder="Ej. Hipertrofia I"
@@ -293,9 +436,17 @@ export function PlanningScreen() {
               onChangeText={setNewMesocycleName}
             />
 
-            <View style={{ flexDirection: 'row', marginTop: Spacing.md, gap: Spacing.md }}>
+            <View
+              style={{
+                flexDirection: "row",
+                marginTop: Spacing.md,
+                gap: Spacing.md,
+              }}
+            >
               <View style={{ flex: 1 }}>
-                <Text style={[Typography.label, { marginBottom: Spacing.xs }]}>Semana Inicio</Text>
+                <Text style={[Typography.label, { marginBottom: Spacing.xs }]}>
+                  Semana Inicio
+                </Text>
                 <TextInput
                   style={styles.input}
                   keyboardType="numeric"
@@ -304,7 +455,9 @@ export function PlanningScreen() {
                 />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={[Typography.label, { marginBottom: Spacing.xs }]}>Semana Fin</Text>
+                <Text style={[Typography.label, { marginBottom: Spacing.xs }]}>
+                  Semana Fin
+                </Text>
                 <TextInput
                   style={styles.input}
                   keyboardType="numeric"
@@ -315,14 +468,28 @@ export function PlanningScreen() {
             </View>
 
             <View style={[styles.cardRow, { marginTop: Spacing.lg }]}>
-              <TouchableOpacity 
-                style={[styles.primaryButton, { backgroundColor: Colors.bgElevated, flex: 1, marginRight: Spacing.sm }]}
+              <TouchableOpacity
+                style={[
+                  styles.primaryButton,
+                  {
+                    backgroundColor: Colors.bgElevated,
+                    flex: 1,
+                    marginRight: Spacing.sm,
+                  },
+                ]}
                 onPress={() => setIsMesocycleModalVisible(false)}
               >
-                <Text style={[styles.primaryButtonText, { color: Colors.textSecondary }]}>Cancelar</Text>
+                <Text
+                  style={[
+                    styles.primaryButtonText,
+                    { color: Colors.textSecondary },
+                  ]}
+                >
+                  Cancelar
+                </Text>
               </TouchableOpacity>
-              
-              <TouchableOpacity 
+
+              <TouchableOpacity
                 style={[styles.primaryButton, { flex: 1 }]}
                 onPress={handleCreateMesocycle}
                 disabled={createMesocycleMutation.isPending}
@@ -348,15 +515,15 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: Spacing.base,
-    paddingBottom: Spacing['3xl'],
+    paddingBottom: Spacing["3xl"],
   },
   header: {
     marginBottom: Spacing.lg,
   },
   infoCard: {
-    backgroundColor: 'rgba(6, 182, 212, 0.12)',
+    backgroundColor: "rgba(6, 182, 212, 0.12)",
     borderWidth: 1,
-    borderColor: 'rgba(6, 182, 212, 0.3)',
+    borderColor: "rgba(6, 182, 212, 0.3)",
     borderRadius: BorderRadius.md,
     padding: Spacing.md,
     marginBottom: Spacing.lg,
@@ -364,7 +531,7 @@ const styles = StyleSheet.create({
   infoText: {
     color: Colors.info,
     fontSize: 13,
-    fontWeight: '500',
+    fontWeight: "500",
     lineHeight: 20,
   },
   card: {
@@ -379,13 +546,13 @@ const styles = StyleSheet.create({
     borderLeftColor: Colors.primary,
   },
   cardRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
   badgeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: Spacing.sm,
   },
   badge: {
@@ -405,20 +572,20 @@ const styles = StyleSheet.create({
   badgeText: {
     color: Colors.white,
     fontSize: 11,
-    fontWeight: '700',
+    fontWeight: "700",
   },
   listCard: {
     backgroundColor: Colors.bgCard,
     borderRadius: BorderRadius.lg,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
   listItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     padding: Spacing.base,
   },
   clientRow: {
-    flexDirection: 'row',
+    flexDirection: "row",
   },
   clientPill: {
     backgroundColor: Colors.bg,
@@ -435,29 +602,29 @@ const styles = StyleSheet.create({
   },
   clientPillText: {
     color: Colors.textSecondary,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   clientPillTextActive: {
     color: Colors.white,
   },
   emptyState: {
-    alignItems: 'center',
+    alignItems: "center",
     padding: Spacing.xl,
     backgroundColor: Colors.bgCard,
     borderRadius: BorderRadius.lg,
   },
   primaryButton: {
-    flexDirection: 'row',
+    flexDirection: "row",
     backgroundColor: Colors.primary,
     paddingVertical: Spacing.md,
     paddingHorizontal: Spacing.lg,
     borderRadius: BorderRadius.md,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   primaryButtonText: {
     color: Colors.white,
-    fontWeight: '700',
+    fontWeight: "700",
     fontSize: 16,
   },
   outlineButton: {
@@ -467,16 +634,16 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.border,
     borderRadius: BorderRadius.md,
-    alignItems: 'center',
+    alignItems: "center",
   },
   outlineButtonText: {
     color: Colors.textSecondary,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "center",
     padding: Spacing.lg,
   },
   modalContent: {
@@ -486,7 +653,7 @@ const styles = StyleSheet.create({
   },
   input: {
     backgroundColor: Colors.bg,
-    color: Colors.white,  
+    color: Colors.white,
     borderWidth: 1,
     borderColor: Colors.border,
     borderRadius: BorderRadius.md,
@@ -507,8 +674,8 @@ const styles = StyleSheet.create({
     marginTop: Spacing.sm,
   },
   sessionItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 8,
     marginTop: 8,
     paddingLeft: 4,
@@ -516,5 +683,5 @@ const styles = StyleSheet.create({
   sessionItemText: {
     color: Colors.textSecondary,
     fontSize: 13,
-  }
+  },
 });

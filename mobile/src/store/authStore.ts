@@ -1,13 +1,14 @@
-import { create } from 'zustand';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { create } from "zustand";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
-export type UserRole = 'coach' | 'client';
+export type UserRole = "coach" | "client";
 
 export interface User {
   id: number;
   name: string;
   email: string;
   role: UserRole;
+  force_password_change?: boolean;
 }
 
 interface AuthState {
@@ -27,8 +28,8 @@ interface AuthState {
 }
 
 const STORAGE_KEYS = {
-  USER: '@fitcoach_user',
-  TOKEN: '@fitcoach_token',
+  USER: "@fitcoach_user",
+  TOKEN: "@fitcoach_token",
 };
 
 export const useAuthStore = create<AuthState>((set, get) => ({
@@ -54,7 +55,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     } catch (e) {
       // Ignore storage errors on logout
     }
-    set({ user: null, token: null, isAuthenticated: false, isLoading: false, error: null });
+    set({
+      user: null,
+      token: null,
+      isAuthenticated: false,
+      isLoading: false,
+      error: null,
+    });
   },
 
   setLoading: (loading) => set({ isLoading: loading }),
@@ -75,7 +82,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
       if (userData && tokenData) {
         const user: User = JSON.parse(userData);
-        set({ user, token: tokenData, isAuthenticated: true, isLoading: false });
+        set({
+          user,
+          token: tokenData,
+          isAuthenticated: true,
+          isLoading: false,
+        });
       } else {
         set({ isLoading: false });
       }

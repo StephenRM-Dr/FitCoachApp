@@ -1,42 +1,61 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
-  View, Text, TextInput, TouchableOpacity, KeyboardAvoidingView,
-  Platform, ScrollView, StyleSheet, ActivityIndicator, Image,
-} from 'react-native';
-import { useAuthStore } from '../../store/authStore';
-import { authService } from '../../services/authService';
-import { User, Mail, Lock, ArrowRight, Eye, EyeOff, ShieldCheck } from 'lucide-react-native';
-import { Colors, Spacing, BorderRadius, Typography } from '../../theme';
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  ActivityIndicator,
+  Image,
+} from "react-native";
+import { useAuthStore } from "../../store/authStore";
+import { authService } from "../../services/authService";
+import {
+  User,
+  Mail,
+  Lock,
+  ArrowRight,
+  Eye,
+  EyeOff,
+  ShieldCheck,
+} from "lucide-react-native";
+import { Colors, Spacing, BorderRadius, Typography } from "../../theme";
 
 export const RegisterScreen = ({ navigation }: any) => {
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [passwordConfirmation, setPasswordConfirmation] = useState('');
-  const [role, setRole] = useState<'coach' | 'client'>('client');
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [passwordConfirmation, setPasswordConfirmation] = useState("");
+  const [role, setRole] = useState<"coach" | "client">("client");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const { setAuth, setError, error, clearError } = useAuthStore();
 
   const passwordStrength = (() => {
-    if (password.length === 0) return { level: 0, label: '', color: Colors.textMuted };
-    if (password.length < 6) return { level: 1, label: 'Débil', color: Colors.danger };
-    if (password.length < 10) return { level: 2, label: 'Media', color: Colors.warning };
-    return { level: 3, label: 'Fuerte', color: Colors.success };
+    if (password.length === 0)
+      return { level: 0, label: "", color: Colors.textMuted };
+    if (password.length < 6)
+      return { level: 1, label: "Débil", color: Colors.danger };
+    if (password.length < 10)
+      return { level: 2, label: "Media", color: Colors.warning };
+    return { level: 3, label: "Fuerte", color: Colors.success };
   })();
 
   const handleRegister = async () => {
     clearError();
     if (!name.trim() || !email.trim() || !password || !passwordConfirmation) {
-      setError('Por favor completa todos los campos.');
+      setError("Por favor completa todos los campos.");
       return;
     }
     if (password !== passwordConfirmation) {
-      setError('Las contraseñas no coinciden.');
+      setError("Las contraseñas no coinciden.");
       return;
     }
     if (password.length < 8) {
-      setError('La contraseña debe tener al menos 8 caracteres.');
+      setError("La contraseña debe tener al menos 8 caracteres.");
       return;
     }
 
@@ -51,13 +70,13 @@ export const RegisterScreen = ({ navigation }: any) => {
       });
       setAuth(
         { ...data.user, role: data.user.role || role },
-        data.access_token
+        data.access_token,
       );
     } catch (err: any) {
       const message =
         err.response?.data?.message ||
         err.response?.data?.errors?.email?.[0] ||
-        'Error al registrar. Intenta de nuevo.';
+        "Error al registrar. Intenta de nuevo.";
       setError(message);
     } finally {
       setLoading(false);
@@ -72,9 +91,9 @@ export const RegisterScreen = ({ navigation }: any) => {
     options: {
       placeholder?: string;
       secureTextEntry?: boolean;
-      keyboardType?: 'default' | 'email-address';
-      autoCapitalize?: 'none' | 'sentences' | 'words';
-    } = {}
+      keyboardType?: "default" | "email-address";
+      autoCapitalize?: "none" | "sentences" | "words";
+    } = {},
   ) => (
     <View style={styles.fieldGroup}>
       <Text style={Typography.label}>{label}</Text>
@@ -90,8 +109,8 @@ export const RegisterScreen = ({ navigation }: any) => {
             if (error) clearError();
           }}
           secureTextEntry={options.secureTextEntry && !showPassword}
-          keyboardType={options.keyboardType || 'default'}
-          autoCapitalize={options.autoCapitalize || 'sentences'}
+          keyboardType={options.keyboardType || "default"}
+          autoCapitalize={options.autoCapitalize || "sentences"}
         />
         {options.secureTextEntry && (
           <TouchableOpacity
@@ -111,7 +130,7 @@ export const RegisterScreen = ({ navigation }: any) => {
 
   return (
     <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
       style={styles.container}
     >
       <ScrollView
@@ -121,7 +140,7 @@ export const RegisterScreen = ({ navigation }: any) => {
         {/* Header */}
         <View style={styles.headerSection}>
           <Image
-            source={require('../../../assets/logo.png')}
+            source={require("../../../assets/logo.png")}
             style={styles.logo}
             resizeMode="contain"
           />
@@ -145,30 +164,44 @@ export const RegisterScreen = ({ navigation }: any) => {
             <TouchableOpacity
               style={[
                 styles.roleButton,
-                role === 'client' && styles.roleButtonActive,
+                role === "client" && styles.roleButtonActive,
               ]}
-              onPress={() => setRole('client')}
+              onPress={() => setRole("client")}
               activeOpacity={0.7}
             >
-              <User size={20} color={role === 'client' ? Colors.white : Colors.textSecondary} />
-              <Text style={[
-                styles.roleText,
-                role === 'client' && styles.roleTextActive,
-              ]}>Asesorado</Text>
+              <User
+                size={20}
+                color={role === "client" ? Colors.white : Colors.textSecondary}
+              />
+              <Text
+                style={[
+                  styles.roleText,
+                  role === "client" && styles.roleTextActive,
+                ]}
+              >
+                Asesorado
+              </Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[
                 styles.roleButton,
-                role === 'coach' && styles.roleButtonActive,
+                role === "coach" && styles.roleButtonActive,
               ]}
-              onPress={() => setRole('coach')}
+              onPress={() => setRole("coach")}
               activeOpacity={0.7}
             >
-              <ShieldCheck size={20} color={role === 'coach' ? Colors.white : Colors.textSecondary} />
-              <Text style={[
-                styles.roleText,
-                role === 'coach' && styles.roleTextActive,
-              ]}>Coach</Text>
+              <ShieldCheck
+                size={20}
+                color={role === "coach" ? Colors.white : Colors.textSecondary}
+              />
+              <Text
+                style={[
+                  styles.roleText,
+                  role === "coach" && styles.roleTextActive,
+                ]}
+              >
+                Coach
+              </Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -177,26 +210,34 @@ export const RegisterScreen = ({ navigation }: any) => {
         <View style={styles.form}>
           {renderInput(
             <User size={20} color={Colors.textMuted} />,
-            'Nombre Completo',
+            "Nombre Completo",
             name,
             setName,
-            { placeholder: 'Juan Pérez', autoCapitalize: 'words' }
+            { placeholder: "Juan Pérez", autoCapitalize: "words" },
           )}
 
           {renderInput(
             <Mail size={20} color={Colors.textMuted} />,
-            'Email',
+            "Email",
             email,
             setEmail,
-            { placeholder: 'tu@email.com', keyboardType: 'email-address', autoCapitalize: 'none' }
+            {
+              placeholder: "tu@email.com",
+              keyboardType: "email-address",
+              autoCapitalize: "none",
+            },
           )}
 
           {renderInput(
             <Lock size={20} color={Colors.textMuted} />,
-            'Contraseña',
+            "Contraseña",
             password,
             setPassword,
-            { placeholder: 'Mínimo 8 caracteres', secureTextEntry: true, autoCapitalize: 'none' }
+            {
+              placeholder: "Mínimo 8 caracteres",
+              secureTextEntry: true,
+              autoCapitalize: "none",
+            },
           )}
 
           {/* Password strength */}
@@ -213,7 +254,9 @@ export const RegisterScreen = ({ navigation }: any) => {
                   ]}
                 />
               </View>
-              <Text style={[Typography.caption, { color: passwordStrength.color }]}>
+              <Text
+                style={[Typography.caption, { color: passwordStrength.color }]}
+              >
                 {passwordStrength.label}
               </Text>
             </View>
@@ -221,10 +264,14 @@ export const RegisterScreen = ({ navigation }: any) => {
 
           {renderInput(
             <Lock size={20} color={Colors.textMuted} />,
-            'Confirmar Contraseña',
+            "Confirmar Contraseña",
             passwordConfirmation,
             setPasswordConfirmation,
-            { placeholder: '••••••••', secureTextEntry: true, autoCapitalize: 'none' }
+            {
+              placeholder: "••••••••",
+              secureTextEntry: true,
+              autoCapitalize: "none",
+            },
           )}
 
           {/* Register button */}
@@ -238,7 +285,12 @@ export const RegisterScreen = ({ navigation }: any) => {
               <ActivityIndicator color={Colors.white} size="small" />
             ) : (
               <>
-                <Text style={[Typography.buttonText, { color: Colors.white, marginRight: Spacing.sm }]}>
+                <Text
+                  style={[
+                    Typography.buttonText,
+                    { color: Colors.white, marginRight: Spacing.sm },
+                  ]}
+                >
                   Registrarme
                 </Text>
                 <ArrowRight size={20} color={Colors.white} />
@@ -250,8 +302,10 @@ export const RegisterScreen = ({ navigation }: any) => {
         {/* Login link */}
         <View style={styles.footer}>
           <Text style={Typography.bodySmall}>¿Ya tienes cuenta? </Text>
-          <TouchableOpacity onPress={() => navigation.navigate('Login')}>
-            <Text style={[Typography.link, { fontSize: 14 }]}>Inicia Sesión</Text>
+          <TouchableOpacity onPress={() => navigation.navigate("Login")}>
+            <Text style={[Typography.link, { fontSize: 14 }]}>
+              Inicia Sesión
+            </Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -267,11 +321,11 @@ const styles = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
     paddingHorizontal: Spacing.xl,
-    paddingTop: Spacing['2xl'],
-    paddingBottom: Spacing['2xl'],
+    paddingTop: Spacing["2xl"],
+    paddingBottom: Spacing["2xl"],
   },
   headerSection: {
-    alignItems: 'center',
+    alignItems: "center",
     marginBottom: Spacing.xl,
   },
   logo: {
@@ -280,7 +334,7 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.md,
   },
   errorContainer: {
-    backgroundColor: 'rgba(239, 68, 68, 0.15)',
+    backgroundColor: "rgba(239, 68, 68, 0.15)",
     borderWidth: 1,
     borderColor: Colors.danger,
     borderRadius: BorderRadius.md,
@@ -290,21 +344,21 @@ const styles = StyleSheet.create({
   errorText: {
     color: Colors.dangerLight,
     fontSize: 13,
-    fontWeight: '500',
+    fontWeight: "500",
   },
   roleSection: {
     marginBottom: Spacing.lg,
     gap: Spacing.sm,
   },
   roleRow: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: Spacing.md,
   },
   roleButton: {
     flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     gap: Spacing.sm,
     backgroundColor: Colors.bgCard,
     borderWidth: 1,
@@ -318,7 +372,7 @@ const styles = StyleSheet.create({
   },
   roleText: {
     color: Colors.textSecondary,
-    fontWeight: '600',
+    fontWeight: "600",
     fontSize: 14,
   },
   roleTextActive: {
@@ -331,14 +385,14 @@ const styles = StyleSheet.create({
     gap: Spacing.sm,
   },
   inputWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     backgroundColor: Colors.bgInput,
     borderWidth: 1,
     borderColor: Colors.border,
     borderRadius: BorderRadius.lg,
     paddingHorizontal: Spacing.base,
-    paddingVertical: Platform.OS === 'ios' ? Spacing.md : Spacing.sm,
+    paddingVertical: Platform.OS === "ios" ? Spacing.md : Spacing.sm,
   },
   input: {
     flex: 1,
@@ -347,8 +401,8 @@ const styles = StyleSheet.create({
     color: Colors.textPrimary,
   },
   strengthRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: Spacing.sm,
   },
   strengthBarBg: {
@@ -356,19 +410,19 @@ const styles = StyleSheet.create({
     height: 4,
     backgroundColor: Colors.bgElevated,
     borderRadius: 2,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
   strengthBarFill: {
-    height: '100%',
+    height: "100%",
     borderRadius: 2,
   },
   button: {
     backgroundColor: Colors.primary,
     paddingVertical: Spacing.base,
     borderRadius: BorderRadius.lg,
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
     marginTop: Spacing.sm,
     shadowColor: Colors.primary,
     shadowOffset: { width: 0, height: 4 },
@@ -380,8 +434,8 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
   footer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
+    flexDirection: "row",
+    justifyContent: "center",
     marginTop: Spacing.xl,
     marginBottom: Spacing.base,
   },

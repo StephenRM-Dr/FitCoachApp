@@ -7,6 +7,9 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
+use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Mail;
+use App\Mail\PasswordResetMail;
 
 class AuthController extends Controller
 {
@@ -74,6 +77,49 @@ class AuthController extends Controller
 
         return response()->json([
             'message' => 'Sesión cerrada correctamente'
+        ]);
+    }
+
+    /**
+     * Recuperación de contraseña (envía nueva por correo).
+     */
+    public function resetPassword(Request $request)
+    {
+        $request->validate([
+            'email' => 'required|email|exists:users,email',
+        ]);
+
+        $user = User::where('email', $request->email)->first();
+        $newPassword = Str::random(8);
+
+        $user->password = $newPassword;
+        $user->force_password_change = true;
+        $user->save();
+
+        Mail::to($user->email)->send(new PasswordResetMail($newPassword));
+
+        return response()->json([
+            'message' => 'Se ha enviado una nueva contraseña a tu correo electrónico.'
+        ]);
+    }
+
+    /**
+     * Actualizar contraseña definitiva (después de recuperación).
+     */
+    public function updatePassword(Request $request)
+    {
+        $request->validate([
+            'password' => 'required|string|min:8|confirmed',
+        ]);
+
+        $user = $request->user();
+        $user->password = $request->password;
+        $user->force_password_change = false;
+        $user->save();
+
+        return response()->json([
+            'message' => 'Contraseña actualizada correctamente.',
+            'user' => $user
         ]);
     }
 }

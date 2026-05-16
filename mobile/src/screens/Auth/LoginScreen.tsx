@@ -1,40 +1,75 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
-  View, Text, TextInput, TouchableOpacity, KeyboardAvoidingView,
-  Platform, ScrollView, StyleSheet, ActivityIndicator, Image, Alert,
-} from 'react-native';
-import { useAuthStore } from '../../store/authStore';
-import { authService } from '../../services/authService';
-import { Mail, Lock, ArrowRight, Eye, EyeOff } from 'lucide-react-native';
-import { Colors, Spacing, BorderRadius, Typography } from '../../theme';
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  ActivityIndicator,
+  Image,
+  Alert,
+  Modal,
+} from "react-native";
+import { useAuthStore } from "../../store/authStore";
+import { authService } from "../../services/authService";
+import { Mail, Lock, ArrowRight, Eye, EyeOff } from "lucide-react-native";
+import { Colors, Spacing, BorderRadius, Typography } from "../../theme";
 
 export const LoginScreen = ({ navigation }: any) => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [modalVisible, setModalVisible] = useState(false);
   const { setAuth, setError, error, clearError } = useAuthStore();
+
+  const handleResetPassword = async () => {
+    if (!email.trim()) {
+      Alert.alert("Error", "Por favor ingresa tu correo electrónico.");
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const res = await authService.resetPassword(email.trim());
+      Alert.alert(
+        "Éxito",
+        res.message ||
+          "Se ha enviado una nueva contraseña a tu correo electrónico.",
+      );
+      setModalVisible(false);
+    } catch (err: any) {
+      const message =
+        err.response?.data?.message ||
+        "Error al intentar restablecer la contraseña.";
+      Alert.alert("Error", message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleLogin = async () => {
     clearError();
     if (!email.trim() || !password.trim()) {
-      setError('Por favor completa todos los campos.');
+      setError("Por favor completa todos los campos.");
       return;
     }
 
-  
     setLoading(true);
     try {
       const data = await authService.login({ email: email.trim(), password });
       setAuth(
-        { ...data.user, role: data.user.role || 'client' },
-        data.access_token
+        { ...data.user, role: data.user.role || "client" },
+        data.access_token,
       );
     } catch (err: any) {
       const message =
         err.response?.data?.message ||
         err.response?.data?.errors?.email?.[0] ||
-        'Credenciales incorrectas. Intenta de nuevo.';
+        "Credenciales incorrectas. Intenta de nuevo.";
       setError(message);
     } finally {
       setLoading(false);
@@ -43,18 +78,17 @@ export const LoginScreen = ({ navigation }: any) => {
 
   return (
     <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
       style={styles.container}
     >
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
-
       >
         {/* Logo & Branding */}
         <View style={styles.brandSection}>
           <Image
-            source={require('../../../assets/logo.png')}
+            source={require("../../../assets/logo.png")}
             style={styles.logo}
             resizeMode="contain"
           />
@@ -131,9 +165,66 @@ export const LoginScreen = ({ navigation }: any) => {
           </View>
 
           {/* Forgot password link */}
-          <TouchableOpacity style={styles.forgotPassword}>
+          <TouchableOpacity
+            style={styles.forgotPassword}
+            onPress={() => setModalVisible(true)}
+          >
             <Text style={Typography.link}>¿Olvidaste tu contraseña?</Text>
           </TouchableOpacity>
+
+          {/* 2. EL MODAL (Elige uno o mezcla según tu gusto) */}
+
+          {/* Opción A: Estilo FlatList (Recomendado, más limpio) */}
+
+          <Modal
+            animationType="slide"
+            transparent={true}
+            visible={modalVisible}
+            onRequestClose={() => setModalVisible(false)}
+          >
+            <View style={styles.modalOverlay}>
+              <View style={styles.modalContent}>
+                {/* Encabezado del modal */}
+                <View style={styles.modalHeader}>
+                  <Text style={styles.modalTitle}>Recuperar Contraseña</Text>
+                  <Text style={styles.modalSubtitle}>
+                    Ingresa tu correo electrónico para enviarte un enlace de
+                    restablecimiento.
+                  </Text>
+                </View>
+
+                {/* Campo de correo */}
+                <View style={styles.inputWrapper}>
+                  <Mail size={20} color={Colors.textMuted} />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="tu@email.com"
+                    placeholderTextColor={Colors.textMuted}
+                    value={email}
+                    onChangeText={setEmail}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                  />
+                </View>
+
+                {/* Botones de acción */}
+                <View style={styles.modalButtons}>
+                  <TouchableOpacity
+                    style={[styles.modalButton, styles.cancelButton]}
+                    onPress={() => setModalVisible(false)}
+                  >
+                    <Text style={styles.cancelButtonText}>Cancelar</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.modalButton, styles.resetButton]}
+                    onPress={handleResetPassword}
+                  >
+                    <Text style={styles.modalButtonText}>Restablecer</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+          </Modal>
 
           {/* Login button */}
           <TouchableOpacity
@@ -146,7 +237,12 @@ export const LoginScreen = ({ navigation }: any) => {
               <ActivityIndicator color={Colors.white} size="small" />
             ) : (
               <>
-                <Text style={[Typography.buttonText, { color: Colors.white, marginRight: Spacing.sm }]}>
+                <Text
+                  style={[
+                    Typography.buttonText,
+                    { color: Colors.white, marginRight: Spacing.sm },
+                  ]}
+                >
                   Iniciar Sesión
                 </Text>
                 <ArrowRight size={20} color={Colors.white} />
@@ -158,7 +254,7 @@ export const LoginScreen = ({ navigation }: any) => {
         {/* Register link */}
         <View style={styles.footer}>
           <Text style={Typography.bodySmall}>¿No tienes cuenta? </Text>
-          <TouchableOpacity onPress={() => navigation.navigate('Register')}>
+          <TouchableOpacity onPress={() => navigation.navigate("Register")}>
             <Text style={[Typography.link, { fontSize: 14 }]}>Regístrate</Text>
           </TouchableOpacity>
         </View>
@@ -175,12 +271,12 @@ const styles = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
     paddingHorizontal: Spacing.xl,
-    paddingTop: Spacing['3xl'],
-    paddingBottom: Spacing['2xl'],
+    paddingTop: Spacing["3xl"],
+    paddingBottom: Spacing["2xl"],
   },
   brandSection: {
-    alignItems: 'center',
-    marginBottom: Spacing['2xl'],
+    alignItems: "center",
+    marginBottom: Spacing["2xl"],
   },
   logo: {
     width: 80,
@@ -189,7 +285,7 @@ const styles = StyleSheet.create({
   },
   appName: {
     fontSize: 24,
-    fontWeight: '800',
+    fontWeight: "800",
     color: Colors.primary,
     letterSpacing: -0.5,
   },
@@ -202,7 +298,7 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.xl,
   },
   errorContainer: {
-    backgroundColor: 'rgba(239, 68, 68, 0.15)',
+    backgroundColor: "rgba(239, 68, 68, 0.15)",
     borderWidth: 1,
     borderColor: Colors.danger,
     borderRadius: BorderRadius.md,
@@ -212,7 +308,7 @@ const styles = StyleSheet.create({
   errorText: {
     color: Colors.dangerLight,
     fontSize: 13,
-    fontWeight: '500',
+    fontWeight: "500",
   },
   form: {
     gap: Spacing.base,
@@ -221,14 +317,14 @@ const styles = StyleSheet.create({
     gap: Spacing.sm,
   },
   inputWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     backgroundColor: Colors.bgInput,
     borderWidth: 1,
     borderColor: Colors.border,
     borderRadius: BorderRadius.lg,
     paddingHorizontal: Spacing.base,
-    paddingVertical: Platform.OS === 'ios' ? Spacing.md : Spacing.sm,
+    paddingVertical: Platform.OS === "ios" ? Spacing.md : Spacing.sm,
   },
   input: {
     flex: 1,
@@ -237,15 +333,15 @@ const styles = StyleSheet.create({
     color: Colors.textPrimary,
   },
   forgotPassword: {
-    alignSelf: 'flex-end',
+    alignSelf: "flex-end",
   },
   button: {
     backgroundColor: Colors.primary,
     paddingVertical: Spacing.base,
     borderRadius: BorderRadius.lg,
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
     marginTop: Spacing.sm,
     shadowColor: Colors.primary,
     shadowOffset: { width: 0, height: 4 },
@@ -257,8 +353,69 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
   footer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    marginTop: Spacing['2xl'],
+    flexDirection: "row",
+    justifyContent: "center",
+    marginTop: Spacing["2xl"],
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: Spacing.xl,
+  },
+  modalContent: {
+    backgroundColor: Colors.bg,
+    borderRadius: BorderRadius.xl,
+    padding: Spacing.xl,
+    width: "100%",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    elevation: 5,
+  },
+  modalHeader: {
+    marginBottom: Spacing.lg,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: Colors.textPrimary,
+    marginBottom: Spacing.xs,
+  },
+  modalSubtitle: {
+    fontSize: 14,
+    color: Colors.textMuted,
+    lineHeight: 20,
+  },
+  modalButtons: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    gap: Spacing.sm,
+    marginTop: Spacing.lg,
+  },
+  modalButton: {
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.lg,
+    borderRadius: BorderRadius.md,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  cancelButton: {
+    backgroundColor: "transparent",
+  },
+  resetButton: {
+    backgroundColor: Colors.primary,
+  },
+  modalButtonText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: Colors.white,
+  },
+  cancelButtonText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: Colors.textPrimary,
   },
 });

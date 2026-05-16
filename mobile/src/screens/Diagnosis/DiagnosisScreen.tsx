@@ -1,9 +1,26 @@
-import React, { useState } from 'react';
-import { View, Text, ScrollView, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator, Modal, Alert } from 'react-native';
-import { User, Ruler, Activity, ChevronDown, Plus, X } from 'lucide-react-native';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { coachService } from '../../services/coachService';
-import { Colors, Spacing, BorderRadius, Typography } from '../../theme';
+import React, { useState } from "react";
+import {
+  View,
+  Text,
+  ScrollView,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  ActivityIndicator,
+  Modal,
+  Alert,
+} from "react-native";
+import {
+  User,
+  Ruler,
+  Activity,
+  ChevronDown,
+  Plus,
+  X,
+} from "lucide-react-native";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { coachService } from "../../services/coachService";
+import { Colors, Spacing, BorderRadius, Typography } from "../../theme";
 
 export function DiagnosisScreen() {
   const [selectedClientId, setSelectedClientId] = useState<number | null>(null);
@@ -12,30 +29,31 @@ export function DiagnosisScreen() {
 
   // 1. My assigned clients
   const { data: myClients = [], isLoading } = useQuery({
-    queryKey: ['my-clients'],
+    queryKey: ["my-clients"],
     queryFn: () => coachService.getMyClients(),
   });
 
   // 2. Available clients (not assigned to anyone)
-  const { data: availableClients = [], isLoading: isLoadingAvailable } = useQuery({
-    queryKey: ['available-clients'],
-    queryFn: () => coachService.getAvailableClients(),
-    enabled: isAssignModalVisible, // Only fetch when modal opens
-  });
+  const { data: availableClients = [], isLoading: isLoadingAvailable } =
+    useQuery({
+      queryKey: ["available-clients"],
+      queryFn: () => coachService.getAvailableClients(),
+      enabled: isAssignModalVisible, // Only fetch when modal opens
+    });
 
   // 3. Mutation to assign client
   const assignClientMutation = useMutation({
     mutationFn: (clientId: number) => coachService.assignClient(clientId),
     onSuccess: () => {
-      Alert.alert('Éxito', 'Alumno asignado correctamente.');
+      Alert.alert("Éxito", "Alumno asignado correctamente.");
       setIsAssignModalVisible(false);
       // Refresh both lists
-      queryClient.invalidateQueries({ queryKey: ['my-clients'] });
-      queryClient.invalidateQueries({ queryKey: ['available-clients'] });
+      queryClient.invalidateQueries({ queryKey: ["my-clients"] });
+      queryClient.invalidateQueries({ queryKey: ["available-clients"] });
     },
     onError: () => {
-      Alert.alert('Error', 'No se pudo asignar el alumno.');
-    }
+      Alert.alert("Error", "No se pudo asignar el alumno.");
+    },
   });
 
   return (
@@ -52,7 +70,7 @@ export function DiagnosisScreen() {
       <View style={styles.card}>
         <View style={styles.clientSelectorHeader}>
           <Text style={Typography.label}>Seleccionar Alumno</Text>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.addClientBtn}
             onPress={() => setIsAssignModalVisible(true)}
           >
@@ -64,24 +82,35 @@ export function DiagnosisScreen() {
         {isLoading ? (
           <ActivityIndicator color={Colors.primary} />
         ) : (
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.clientRow}>
-            {myClients.map(client => (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.clientRow}
+          >
+            {myClients.map((client) => (
               <TouchableOpacity
                 key={client.id}
                 style={[
                   styles.clientPill,
-                  selectedClientId === client.id && styles.clientPillActive
+                  selectedClientId === client.id && styles.clientPillActive,
                 ]}
                 onPress={() => setSelectedClientId(client.id)}
               >
-                <Text style={[
-                  styles.clientPillText,
-                  selectedClientId === client.id && styles.clientPillTextActive
-                ]}>{client.name}</Text>
+                <Text
+                  style={[
+                    styles.clientPillText,
+                    selectedClientId === client.id &&
+                      styles.clientPillTextActive,
+                  ]}
+                >
+                  {client.name}
+                </Text>
               </TouchableOpacity>
             ))}
             {myClients.length === 0 && (
-              <Text style={[Typography.body, { color: Colors.textMuted }]}>No tienes alumnos asignados.</Text>
+              <Text style={[Typography.body, { color: Colors.textMuted }]}>
+                No tienes alumnos asignados.
+              </Text>
             )}
           </ScrollView>
         )}
@@ -90,7 +119,12 @@ export function DiagnosisScreen() {
       {/* Datos del Atleta */}
       <View style={styles.card}>
         <View style={styles.cardHeader}>
-          <View style={[styles.iconBox, { backgroundColor: 'rgba(59,130,246,0.15)' }]}>
+          <View
+            style={[
+              styles.iconBox,
+              { backgroundColor: "rgba(59,130,246,0.15)" },
+            ]}
+          >
             <User color={Colors.primary} size={18} />
           </View>
           <Text style={Typography.h5}>Datos del Atleta</Text>
@@ -131,7 +165,12 @@ export function DiagnosisScreen() {
       {/* Tests de Rendimiento */}
       <View style={styles.card}>
         <View style={styles.cardHeader}>
-          <View style={[styles.iconBox, { backgroundColor: 'rgba(16,185,129,0.15)' }]}>
+          <View
+            style={[
+              styles.iconBox,
+              { backgroundColor: "rgba(16,185,129,0.15)" },
+            ]}
+          >
             <Activity color={Colors.success} size={18} />
           </View>
           <Text style={Typography.h5}>Tests de Rendimiento</Text>
@@ -160,7 +199,9 @@ export function DiagnosisScreen() {
 
       {/* Save button */}
       <TouchableOpacity style={styles.saveButton} activeOpacity={0.8}>
-        <Text style={[Typography.buttonText, { color: Colors.white }]}>Guardar Diagnóstico</Text>
+        <Text style={[Typography.buttonText, { color: Colors.white }]}>
+          Guardar Diagnóstico
+        </Text>
       </TouchableOpacity>
       {/* Assign Client Modal */}
       <Modal
@@ -179,17 +220,31 @@ export function DiagnosisScreen() {
             </View>
 
             {isLoadingAvailable ? (
-              <ActivityIndicator color={Colors.primary} style={{ marginVertical: Spacing.xl }} />
+              <ActivityIndicator
+                color={Colors.primary}
+                style={{ marginVertical: Spacing.xl }}
+              />
             ) : availableClients.length === 0 ? (
-              <Text style={[Typography.body, { color: Colors.textMuted, textAlign: 'center', marginVertical: Spacing.xl }]}>
+              <Text
+                style={[
+                  Typography.body,
+                  {
+                    color: Colors.textMuted,
+                    textAlign: "center",
+                    marginVertical: Spacing.xl,
+                  },
+                ]}
+              >
                 No hay alumnos disponibles para asignar en este momento.
               </Text>
             ) : (
               <ScrollView style={styles.modalList}>
-                {availableClients.map(client => (
+                {availableClients.map((client) => (
                   <View key={client.id} style={styles.availableClientRow}>
                     <View style={{ flex: 1 }}>
-                      <Text style={[Typography.body, { fontWeight: '600' }]}>{client.name}</Text>
+                      <Text style={[Typography.body, { fontWeight: "600" }]}>
+                        {client.name}
+                      </Text>
                       <Text style={Typography.caption}>{client.email}</Text>
                     </View>
                     <TouchableOpacity
@@ -217,7 +272,7 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: Spacing.base,
-    paddingBottom: Spacing['3xl'],
+    paddingBottom: Spacing["3xl"],
   },
   header: {
     marginBottom: Spacing.lg,
@@ -229,20 +284,20 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.lg,
   },
   cardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginBottom: Spacing.base,
     gap: Spacing.md,
   },
   clientSelectorHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: Spacing.sm,
   },
   addClientBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     backgroundColor: Colors.primary,
     paddingHorizontal: Spacing.sm,
     paddingVertical: 4,
@@ -252,21 +307,21 @@ const styles = StyleSheet.create({
   addClientBtnText: {
     color: Colors.white,
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   iconBox: {
     width: 36,
     height: 36,
     borderRadius: BorderRadius.md,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   fieldGroup: {
     marginBottom: Spacing.md,
     gap: Spacing.sm,
   },
   fieldRow: {
-    flexDirection: 'row',
+    flexDirection: "row",
   },
   input: {
     backgroundColor: Colors.bg,
@@ -282,7 +337,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.success,
     paddingVertical: Spacing.base,
     borderRadius: BorderRadius.lg,
-    alignItems: 'center',
+    alignItems: "center",
     marginBottom: Spacing.lg,
     shadowColor: Colors.success,
     shadowOffset: { width: 0, height: 4 },
@@ -291,7 +346,7 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   clientRow: {
-    flexDirection: 'row',
+    flexDirection: "row",
   },
   clientPill: {
     backgroundColor: Colors.bg,
@@ -308,49 +363,49 @@ const styles = StyleSheet.create({
   },
   clientPillText: {
     color: Colors.textSecondary,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   clientPillTextActive: {
     color: Colors.white,
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'flex-end',
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "flex-end",
   },
   modalContent: {
     backgroundColor: Colors.bgCard,
     borderTopLeftRadius: BorderRadius.xl,
     borderTopRightRadius: BorderRadius.xl,
     padding: Spacing.lg,
-    maxHeight: '80%',
+    maxHeight: "80%",
   },
   modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: Spacing.lg,
   },
   modalList: {
     marginBottom: Spacing.xl,
   },
   availableClientRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     paddingVertical: Spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,
   },
   assignBtn: {
-    backgroundColor: 'rgba(16, 185, 129, 0.15)',
+    backgroundColor: "rgba(16, 185, 129, 0.15)",
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.sm,
     borderRadius: BorderRadius.md,
   },
   assignBtnText: {
     color: Colors.success,
-    fontWeight: '600',
+    fontWeight: "600",
     fontSize: 14,
   },
 });

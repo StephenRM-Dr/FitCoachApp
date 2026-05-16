@@ -1,4 +1,4 @@
-import api from './api';
+import api from "./api";
 
 export interface NutritionLog {
   id: number;
@@ -13,19 +13,19 @@ export interface NutritionLog {
 export const nutritionService = {
   getNutritionLogs: async (clientId?: number) => {
     const params = clientId ? { client_id: clientId } : {};
-    const response = await api.get('/nutrition-logs', { params });
+    const response = await api.get("/nutrition-logs", { params });
     return response.data;
   },
 
   getTodayLog: async (clientId?: number) => {
     const params = clientId ? { client_id: clientId } : {};
-    const response = await api.get('/nutrition-logs/today', { params });
+    const response = await api.get("/nutrition-logs/today", { params });
     return response.data;
   },
 
   saveLog: async (data: Partial<NutritionLog>, clientId?: number) => {
     const payload = clientId ? { ...data, client_id: clientId } : data;
-    const response = await api.post('/nutrition-logs', payload);
+    const response = await api.post("/nutrition-logs", payload);
     return response.data;
   },
 };

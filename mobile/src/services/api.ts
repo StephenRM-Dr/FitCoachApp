@@ -1,16 +1,17 @@
-import axios from 'axios';
+import axios from "axios";
+
+import { useAuthStore } from "../store/authStore";
 
 // En desarrollo con Expo, 'localhost' no funciona para el backend.
 // Se debe usar la IP de la máquina o la URL de NGROK.
-const BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8000/api/v1'; 
-
-import { useAuthStore } from '../store/authStore';
+const BASE_URL =
+  process.env.EXPO_PUBLIC_API_URL || "http://localhost:8000/api/v1";
 
 const api = axios.create({
   baseURL: BASE_URL,
   headers: {
-    'Content-Type': 'application/json',
-    'Accept': 'application/json',
+    "Content-Type": "application/json",
+    Accept: "application/json",
   },
 });
 
@@ -25,16 +26,16 @@ api.interceptors.request.use(
   },
   (error) => {
     return Promise.reject(error);
-  }
+  },
 );
 
 // Interceptor para debugging (opcional)
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    console.error('API Error:', error.response?.data || error.message);
+    console.error("API Error:", error.response?.data || error.message);
     return Promise.reject(error);
-  }
+  },
 );
 
 export default api;

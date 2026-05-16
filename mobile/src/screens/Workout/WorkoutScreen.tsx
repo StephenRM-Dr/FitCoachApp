@@ -1,14 +1,22 @@
-import React, { useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Alert, ActivityIndicator } from 'react-native';
-import { Play, Dumbbell, Save, Clock, CheckCircle } from 'lucide-react-native';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { workoutService } from '../../services/workoutService';
-import { Colors, Spacing, BorderRadius, Typography } from '../../theme';
-  
+import React, { useState } from "react";
+import {
+  View,
+  Text,
+  ScrollView,
+  TouchableOpacity,
+  StyleSheet,
+  Alert,
+  ActivityIndicator,
+} from "react-native";
+import { Play, Dumbbell, Save, Clock, CheckCircle } from "lucide-react-native";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { workoutService } from "../../services/workoutService";
+import { Colors, Spacing, BorderRadius, Typography } from "../../theme";
+
 const EXERCISES = [
-  { name: 'Sentadilla con Barra', sets: '3 x 10', weight: '100 kg' },
-  { name: 'Remo con Pendlay', sets: '3 x 12', weight: '60 kg' },
-  { name: 'Facepulls', sets: '3 x 15', weight: '20 kg' },
+  { name: "Sentadilla con Barra", sets: "3 x 10", weight: "100 kg" },
+  { name: "Remo con Pendlay", sets: "3 x 12", weight: "60 kg" },
+  { name: "Facepulls", sets: "3 x 15", weight: "20 kg" },
 ];
 
 export const WorkoutScreen = () => {
@@ -18,22 +26,22 @@ export const WorkoutScreen = () => {
     mutationFn: async () => {
       // Mocking the completion of the current exercise for the MVP
       await workoutService.saveWorkoutLog({
-        exercise_name: 'Press de Banca',
+        exercise_name: "Press de Banca",
         sets: 4,
         reps: 8,
         weight_kg: 85,
         rpe: 8,
         rir: 2,
-        session_date: new Date().toISOString().split('T')[0],
+        session_date: new Date().toISOString().split("T")[0],
       });
     },
     onSuccess: () => {
-      Alert.alert('¡Excelente!', 'Entrenamiento guardado con éxito.');
-      queryClient.invalidateQueries({ queryKey: ['workout-logs'] });
+      Alert.alert("¡Excelente!", "Entrenamiento guardado con éxito.");
+      queryClient.invalidateQueries({ queryKey: ["workout-logs"] });
     },
     onError: () => {
-      Alert.alert('Error', 'No se pudo guardar el entrenamiento.');
-    }
+      Alert.alert("Error", "No se pudo guardar el entrenamiento.");
+    },
   });
 
   return (
@@ -80,17 +88,21 @@ export const WorkoutScreen = () => {
       <View style={styles.progressCard}>
         <View style={styles.progressHeader}>
           <Clock size={18} color={Colors.textSecondary} />
-          <Text style={[Typography.label, { marginLeft: Spacing.sm }]}>Progreso de la Sesión</Text>
+          <Text style={[Typography.label, { marginLeft: Spacing.sm }]}>
+            Progreso de la Sesión
+          </Text>
         </View>
         <View style={styles.progressBarBg}>
-          <View style={[styles.progressBarFill, { width: '25%' }]} />
+          <View style={[styles.progressBarFill, { width: "25%" }]} />
         </View>
         <Text style={Typography.caption}>1 de 4 ejercicios completados</Text>
       </View>
 
       {/* Next Exercises */}
       <View style={styles.card}>
-        <Text style={[Typography.h5, { marginBottom: Spacing.md }]}>Próximos Ejercicios</Text>
+        <Text style={[Typography.h5, { marginBottom: Spacing.md }]}>
+          Próximos Ejercicios
+        </Text>
         {EXERCISES.map((ex, i) => (
           <View
             key={i}
@@ -106,12 +118,16 @@ export const WorkoutScreen = () => {
               <Dumbbell size={18} color={Colors.textSecondary} />
             </View>
             <View style={styles.exerciseInfo}>
-              <Text style={[Typography.body, { fontWeight: '600', fontSize: 14 }]}>
+              <Text
+                style={[Typography.body, { fontWeight: "600", fontSize: 14 }]}
+              >
                 {ex.name}
               </Text>
               <Text style={Typography.caption}>{ex.sets}</Text>
             </View>
-            <Text style={[Typography.body, { fontWeight: '700', fontSize: 14 }]}>
+            <Text
+              style={[Typography.body, { fontWeight: "700", fontSize: 14 }]}
+            >
               {ex.weight}
             </Text>
           </View>
@@ -119,8 +135,8 @@ export const WorkoutScreen = () => {
       </View>
 
       {/* Finish button */}
-      <TouchableOpacity 
-        style={styles.finishButton} 
+      <TouchableOpacity
+        style={styles.finishButton}
         activeOpacity={0.8}
         onPress={() => finishSessionMutation.mutate()}
         disabled={finishSessionMutation.isPending}
@@ -130,7 +146,12 @@ export const WorkoutScreen = () => {
         ) : (
           <>
             <Save size={20} color={Colors.white} />
-            <Text style={[Typography.buttonText, { color: Colors.white, marginLeft: Spacing.sm }]}>
+            <Text
+              style={[
+                Typography.buttonText,
+                { color: Colors.white, marginLeft: Spacing.sm },
+              ]}
+            >
               Finalizar Sesión
             </Text>
           </>
@@ -147,7 +168,7 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: Spacing.base,
-    paddingBottom: Spacing['3xl'],
+    paddingBottom: Spacing["3xl"],
   },
   header: {
     marginBottom: Spacing.lg,
@@ -164,18 +185,18 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   currentExHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: Spacing.base,
   },
   currentExName: {
     fontSize: 18,
-    fontWeight: '800',
+    fontWeight: "800",
     color: Colors.white,
   },
   currentExBadge: {
-    backgroundColor: 'rgba(255,255,255,0.2)',
+    backgroundColor: "rgba(255,255,255,0.2)",
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.xs,
     borderRadius: BorderRadius.full,
@@ -183,37 +204,37 @@ const styles = StyleSheet.create({
   currentExBadgeText: {
     color: Colors.white,
     fontSize: 11,
-    fontWeight: '700',
+    fontWeight: "700",
   },
   currentExStats: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    justifyContent: "space-between",
     marginBottom: Spacing.lg,
   },
   currentExLabel: {
-    color: 'rgba(255,255,255,0.6)',
+    color: "rgba(255,255,255,0.6)",
     fontSize: 10,
-    fontWeight: '700',
+    fontWeight: "700",
     letterSpacing: 0.5,
     marginBottom: 4,
   },
   currentExValue: {
     color: Colors.white,
     fontSize: 22,
-    fontWeight: '800',
+    fontWeight: "800",
   },
   startButton: {
     backgroundColor: Colors.white,
     paddingVertical: Spacing.md,
     borderRadius: BorderRadius.lg,
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
     gap: Spacing.sm,
   },
   startButtonText: {
     color: Colors.primary,
-    fontWeight: '700',
+    fontWeight: "700",
     fontSize: 16,
   },
   progressCard: {
@@ -224,17 +245,17 @@ const styles = StyleSheet.create({
     gap: Spacing.sm,
   },
   progressHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
   },
   progressBarBg: {
     height: 6,
     backgroundColor: Colors.bgElevated,
     borderRadius: 3,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
   progressBarFill: {
-    height: '100%',
+    height: "100%",
     backgroundColor: Colors.success,
     borderRadius: 3,
   },
@@ -245,8 +266,8 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.lg,
   },
   exerciseRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     paddingVertical: Spacing.md,
   },
   exerciseIcon: {
@@ -254,8 +275,8 @@ const styles = StyleSheet.create({
     height: 40,
     borderRadius: BorderRadius.md,
     backgroundColor: Colors.bg,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     marginRight: Spacing.md,
   },
   exerciseInfo: {
@@ -266,9 +287,9 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.success,
     paddingVertical: Spacing.base,
     borderRadius: BorderRadius.lg,
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
     marginBottom: Spacing.lg,
     shadowColor: Colors.success,
     shadowOffset: { width: 0, height: 4 },

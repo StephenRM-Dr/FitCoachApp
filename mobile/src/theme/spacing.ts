@@ -9,10 +9,10 @@ export const Spacing = {
   base: 16,
   lg: 20,
   xl: 24,
-  '2xl': 32,
-  '3xl': 40,
-  '4xl': 48,
-  '5xl': 64,
+  "2xl": 32,
+  "3xl": 40,
+  "4xl": 48,
+  "5xl": 64,
 } as const;
 
 export const BorderRadius = {
@@ -20,6 +20,6 @@ export const BorderRadius = {
   md: 12,
   lg: 16,
   xl: 20,
-  '2xl': 24,
+  "2xl": 24,
   full: 9999,
 } as const;

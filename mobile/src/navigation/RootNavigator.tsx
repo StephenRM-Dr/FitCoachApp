@@ -1,29 +1,35 @@
-import React from 'react';
-import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { ActivityIndicator, View, StyleSheet } from 'react-native';
-import { useAuthStore } from '../store/authStore';
+import React from "react";
+import { createNativeStackNavigator } from "@react-navigation/native-stack";
+import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
+import { ActivityIndicator, View, StyleSheet } from "react-native";
+import { useAuthStore } from "../store/authStore";
 import {
-  Home, Dumbbell, TrendingUp, Apple, UserCircle,
-  ClipboardList, Users,
-} from 'lucide-react-native';
-import { Colors } from '../theme';
+  Home,
+  Dumbbell,
+  TrendingUp,
+  Apple,
+  UserCircle,
+  ClipboardList,
+  Users,
+} from "lucide-react-native";
+import { Colors } from "../theme";
 
 // Auth Screens
-import { LoginScreen } from '../screens/Auth/LoginScreen';
-import { RegisterScreen } from '../screens/Auth/RegisterScreen';
+import { LoginScreen } from "../screens/Auth/LoginScreen";
+import { RegisterScreen } from "../screens/Auth/RegisterScreen";
+import { ForcePasswordChangeScreen } from "../screens/Auth/ForcePasswordChangeScreen";
 
 // Client Screens
-import { DashboardScreen } from '../screens/Dashboard/DashboardScreen';
-import { WorkoutScreen } from '../screens/Workout/WorkoutScreen';
-import { ProgressScreen } from '../screens/Progress/ProgressScreen';
-import { NutritionScreen } from '../screens/Nutrition/NutritionScreen';
-import { ProfileScreen } from '../screens/Profile/ProfileScreen';
+import { DashboardScreen } from "../screens/Dashboard/DashboardScreen";
+import { WorkoutScreen } from "../screens/Workout/WorkoutScreen";
+import { ProgressScreen } from "../screens/Progress/ProgressScreen";
+import { NutritionScreen } from "../screens/Nutrition/NutritionScreen";
+import { ProfileScreen } from "../screens/Profile/ProfileScreen";
 
 // Coach Screens (reuse some + specific ones)
-import { PlanningScreen } from '../screens/Planning/PlanningScreen';
-import { DiagnosisScreen } from '../screens/Diagnosis/DiagnosisScreen';
-import { SessionBuilderScreen } from '../screens/Planning/SessionBuilderScreen';
+import { PlanningScreen } from "../screens/Planning/PlanningScreen";
+import { DiagnosisScreen } from "../screens/Diagnosis/DiagnosisScreen";
+import { SessionBuilderScreen } from "../screens/Planning/SessionBuilderScreen";
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -38,12 +44,12 @@ const tabBarStyle = {
 
 const screenOptions = {
   headerStyle: { backgroundColor: Colors.bg },
-  headerTitleStyle: { fontWeight: '700' as const, color: Colors.textPrimary },
+  headerTitleStyle: { fontWeight: "700" as const, color: Colors.textPrimary },
   headerTintColor: Colors.textPrimary,
   tabBarActiveTintColor: Colors.primary,
   tabBarInactiveTintColor: Colors.textMuted,
   tabBarStyle,
-  tabBarLabelStyle: { fontSize: 11, fontWeight: '600' as const },
+  tabBarLabelStyle: { fontSize: 11, fontWeight: "600" as const },
 };
 
 /**
@@ -58,23 +64,27 @@ function ClientTabs() {
         component={DashboardScreen}
         options={{
           tabBarIcon: ({ color, size }) => <Home color={color} size={size} />,
-          title: 'Inicio',
+          title: "Inicio",
         }}
       />
       <Tab.Screen
         name="Workout"
         component={WorkoutScreen}
         options={{
-          tabBarIcon: ({ color, size }) => <Dumbbell color={color} size={size} />,
-          title: 'Entrenar',
+          tabBarIcon: ({ color, size }) => (
+            <Dumbbell color={color} size={size} />
+          ),
+          title: "Entrenar",
         }}
       />
       <Tab.Screen
         name="Progress"
         component={ProgressScreen}
         options={{
-          tabBarIcon: ({ color, size }) => <TrendingUp color={color} size={size} />,
-          title: 'Progreso',
+          tabBarIcon: ({ color, size }) => (
+            <TrendingUp color={color} size={size} />
+          ),
+          title: "Progreso",
         }}
       />
       <Tab.Screen
@@ -82,15 +92,17 @@ function ClientTabs() {
         component={NutritionScreen}
         options={{
           tabBarIcon: ({ color, size }) => <Apple color={color} size={size} />,
-          title: 'Nutrición',
+          title: "Nutrición",
         }}
       />
       <Tab.Screen
         name="Profile"
         component={ProfileScreen}
         options={{
-          tabBarIcon: ({ color, size }) => <UserCircle color={color} size={size} />,
-          title: 'Perfil',
+          tabBarIcon: ({ color, size }) => (
+            <UserCircle color={color} size={size} />
+          ),
+          title: "Perfil",
         }}
       />
     </Tab.Navigator>
@@ -109,15 +121,17 @@ function CoachTabs() {
         component={DashboardScreen}
         options={{
           tabBarIcon: ({ color, size }) => <Home color={color} size={size} />,
-          title: 'Resumen',
+          title: "Resumen",
         }}
       />
       <Tab.Screen
         name="Planning"
         component={PlanningScreen}
         options={{
-          tabBarIcon: ({ color, size }) => <ClipboardList color={color} size={size} />,
-          title: 'Planificación',
+          tabBarIcon: ({ color, size }) => (
+            <ClipboardList color={color} size={size} />
+          ),
+          title: "Planificación",
         }}
       />
       <Tab.Screen
@@ -125,23 +139,27 @@ function CoachTabs() {
         component={DiagnosisScreen}
         options={{
           tabBarIcon: ({ color, size }) => <Users color={color} size={size} />,
-          title: 'Diagnóstico',
+          title: "Diagnóstico",
         }}
       />
       <Tab.Screen
         name="Workout"
         component={WorkoutScreen}
         options={{
-          tabBarIcon: ({ color, size }) => <Dumbbell color={color} size={size} />,
-          title: 'Entrenar',
+          tabBarIcon: ({ color, size }) => (
+            <Dumbbell color={color} size={size} />
+          ),
+          title: "Entrenar",
         }}
       />
       <Tab.Screen
         name="Profile"
         component={ProfileScreen}
         options={{
-          tabBarIcon: ({ color, size }) => <UserCircle color={color} size={size} />,
-          title: 'Perfil',
+          tabBarIcon: ({ color, size }) => (
+            <UserCircle color={color} size={size} />
+          ),
+          title: "Perfil",
         }}
       />
     </Tab.Navigator>
@@ -176,10 +194,19 @@ export const RootNavigator = () => {
           <Stack.Screen name="Login" component={LoginScreen} />
           <Stack.Screen name="Register" component={RegisterScreen} />
         </>
-      ) : user?.role === 'coach' ? (
+      ) : user?.force_password_change ? (
+        <Stack.Screen
+          name="ForcePasswordChange"
+          component={ForcePasswordChangeScreen}
+        />
+      ) : user?.role === "coach" ? (
         <>
           <Stack.Screen name="Main" component={CoachTabs} />
-          <Stack.Screen name="SessionBuilder" component={SessionBuilderScreen} options={{ headerShown: true, title: 'Constructor de Sesión' }} />
+          <Stack.Screen
+            name="SessionBuilder"
+            component={SessionBuilderScreen}
+            options={{ headerShown: true, title: "Constructor de Sesión" }}
+          />
         </>
       ) : (
         <Stack.Screen name="Main" component={ClientTabs} />
@@ -191,8 +218,8 @@ export const RootNavigator = () => {
 const styles = StyleSheet.create({
   splash: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     backgroundColor: Colors.bg,
   },
 });

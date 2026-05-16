@@ -1,5 +1,4 @@
 <?php
-
 use App\Http\Controllers\Api\WorkoutLogController;
 use App\Http\Controllers\Api\AnamnesisController;
 use App\Http\Controllers\Api\AnthropometricController;
@@ -21,8 +20,11 @@ Route::get('/user', function (Request $request) {
 
 Route::post('v1/register', [AuthController::class, 'register']);
 Route::post('v1/login', [AuthController::class, 'login']);
+Route::post('v1/password/reset', [AuthController::class, 'resetPassword']);
 
 Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
+    Route::post('logout', [AuthController::class, 'logout']);
+    Route::post('password/update', [AuthController::class, 'updatePassword']);
     Route::apiResource('workout-logs', WorkoutLogController::class);
     Route::post('anamnesis', [AnamnesisController::class, 'store']);
     Route::get('anamnesis', [AnamnesisController::class, 'index']);
@@ -44,7 +46,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     Route::get('client/my-coach', [CoachController::class, 'getMyCoach']);
 
     // --- NUEVA ARQUITECTURA DE PERIODIZACIÓN ---
-    
+
     // Catálogo
     Route::get('exercises', [ExerciseController::class, 'index']);
 

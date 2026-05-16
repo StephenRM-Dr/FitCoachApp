@@ -1,9 +1,9 @@
-import { create } from 'zustand';
+import { create } from "zustand";
 
 interface Session {
   id: string;
   name: string;
-  type: 'Strength' | 'Endurance';
+  type: "Strength" | "Endurance";
   exercises: any[];
 }
 
@@ -29,16 +29,17 @@ interface TrainingState {
 }
 
 export const useTrainingStore = create<TrainingState>((set) => ({
-  macrocicloName: 'Plan Anual 2026',
-  currentMesocycleId: '1',
+  macrocicloName: "Plan Anual 2026",
+  currentMesocycleId: "1",
   mesociclos: [
     {
-      id: '1',
-      name: 'Fuerza Base',
-      objective: 'Mejorar RM en ejercicios multiarticulares',
-      microcycles: []
-    }
+      id: "1",
+      name: "Fuerza Base",
+      objective: "Mejorar RM en ejercicios multiarticulares",
+      microcycles: [],
+    },
   ],
   setMacrocicloName: (name) => set({ macrocicloName: name }),
-  addMesociclo: (meso) => set((state) => ({ mesociclos: [...state.mesociclos, meso] })),
+  addMesociclo: (meso) =>
+    set((state) => ({ mesociclos: [...state.mesociclos, meso] })),
 }));

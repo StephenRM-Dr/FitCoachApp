@@ -1,4 +1,4 @@
-import api from './api';
+import api from "./api";
 
 interface LoginCredentials {
   email: string;
@@ -10,7 +10,7 @@ interface RegisterData {
   email: string;
   password: string;
   password_confirmation: string;
-  role?: 'coach' | 'client';
+  role?: "coach" | "client";
 }
 
 interface AuthResponse {
@@ -20,28 +20,42 @@ interface AuthResponse {
     id: number;
     name: string;
     email: string;
-    role: 'coach' | 'client';
+    role: "coach" | "client";
+    force_password_change?: boolean;
   };
 }
 
 export const authService = {
   register: async (data: RegisterData): Promise<AuthResponse> => {
-    const response = await api.post('/register', data);
+    const response = await api.post("/register", data);
     return response.data;
   },
 
   login: async (credentials: LoginCredentials): Promise<AuthResponse> => {
-    const response = await api.post('/login', credentials);
+    const response = await api.post("/login", credentials);
     return response.data;
   },
 
   logout: async (): Promise<{ message: string }> => {
-    const response = await api.post('/logout');
+    const response = await api.post("/logout");
     return response.data;
   },
 
   getCurrentUser: async () => {
-    const response = await api.get('/user');
+    const response = await api.get("/user");
+    return response.data;
+  },
+
+  resetPassword: async (email: string): Promise<{ message: string }> => {
+    const response = await api.post("/password/reset", { email });
+    return response.data;
+  },
+
+  updatePassword: async (data: {
+    password: string;
+    password_confirmation: string;
+  }): Promise<{ message: string; user: AuthResponse["user"] }> => {
+    const response = await api.post("/password/update", data);
     return response.data;
   },
 };
