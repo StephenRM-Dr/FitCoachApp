@@ -10,7 +10,7 @@ import {
   TextInput,
   Alert,
 } from "react-native";
-import { Calendar, ChevronRight, Plus } from "lucide-react-native";
+import { Calendar, ChevronRight, Plus, Dumbbell } from "lucide-react-native";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigation } from "@react-navigation/native";
 import { coachService } from "../../services/coachService";
@@ -277,19 +277,42 @@ export function PlanningScreen() {
                               {micro.workout_sessions &&
                               micro.workout_sessions.length > 0 ? (
                                 micro.workout_sessions.map((session) => (
-                                  <View
-                                    key={session.id}
-                                    style={styles.sessionItem}
-                                  >
-                                    <Calendar
-                                      size={14}
-                                      color={Colors.textMuted}
-                                    />
-                                    <Text style={styles.sessionItemText}>
-                                      {session.name} (
-                                      {session.day_of_week || "N/A"})
-                                    </Text>
-                                  </View>
+                                    <View key={session.id} style={{ flex: 1 }}>
+                                      <View style={styles.sessionItem}>
+                                        <Calendar
+                                          size={14}
+                                          color={Colors.textMuted}
+                                        />
+                                        <Text style={styles.sessionItemText}>
+                                          {session.name} (
+                                          {session.day_of_week || "N/A"})
+                                        </Text>
+                                      </View>
+                                      {/* Lista de Ejercicios */}
+                                      <View style={styles.exerciseMiniList}>
+                                        {session.session_exercises?.map(
+                                          (se: any) => (
+                                            <View
+                                              key={se.id}
+                                              style={styles.exerciseMiniRow}
+                                            >
+                                              <Dumbbell
+                                                size={10}
+                                                color={Colors.textMuted}
+                                              />
+                                              <Text
+                                                style={styles.exerciseMiniText}
+                                              >
+                                                {se.exercise?.name} (
+                                                {se.target_sets}x
+                                                {se.target_reps} @RPE
+                                                {se.target_rpe})
+                                              </Text>
+                                            </View>
+                                          ),
+                                        )}
+                                      </View>
+                                    </View>
                                 ))
                               ) : (
                                 <Text style={Typography.caption}>
@@ -683,5 +706,20 @@ const styles = StyleSheet.create({
   sessionItemText: {
     color: Colors.textSecondary,
     fontSize: 13,
+    fontWeight: "600",
+  },
+  exerciseMiniList: {
+    marginTop: 4,
+    paddingLeft: 22,
+    gap: 2,
+  },
+  exerciseMiniRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  exerciseMiniText: {
+    color: Colors.textMuted,
+    fontSize: 11,
   },
 });

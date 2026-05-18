@@ -39,7 +39,10 @@ export function SessionBuilderScreen({ route, navigation }: any) {
       Alert.alert("Éxito", "Sesión creada correctamente");
       navigation.goBack();
     },
-    onError: () => Alert.alert("Error", "No se pudo crear la sesión"),
+    onError: (error: any) => {
+      console.error("Create Session Error:", error.response?.data || error.message);
+      Alert.alert("Error", "No se pudo crear la sesión. Revisa los datos e intenta de nuevo.");
+    },
   });
 
   const filteredExercises = exercises.filter(
@@ -83,10 +86,10 @@ export function SessionBuilderScreen({ route, navigation }: any) {
       day_of_week: dayOfWeek,
       exercises: selectedExercises.map((ex) => ({
         exercise_id: ex.exercise_id,
-        target_sets: parseInt(ex.target_sets),
-        target_reps: parseInt(ex.target_reps),
-        target_rpe: parseInt(ex.target_rpe),
-        rest_time_seconds: parseInt(ex.rest_time_seconds),
+        target_sets: parseInt(String(ex.target_sets)) || 0,
+        target_reps: parseInt(String(ex.target_reps)) || 0,
+        target_rpe: parseInt(String(ex.target_rpe)) || 0,
+        rest_time_seconds: parseInt(String(ex.rest_time_seconds)) || 0,
       })),
     });
   };
@@ -201,45 +204,95 @@ export function SessionBuilderScreen({ route, navigation }: any) {
       </TouchableOpacity>
 
       {/* Modal Ejercicios */}
-      <Modal visible={isExerciseModalVisible} animationType="slide">
-        <View style={styles.modalHeader}>
-          <Text style={Typography.h4}>Catálogo de Ejercicios</Text>
-          <TouchableOpacity onPress={() => setIsExerciseModalVisible(false)}>
-            <X size={24} color={Colors.text} />
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.searchBar}>
-          <Search size={20} color={Colors.textMuted} />
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Buscar ejercicio o grupo..."
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-          />
-        </View>
-
-        {loadingExercises ? (
-          <ActivityIndicator style={{ marginTop: 20 }} color={Colors.primary} />
-        ) : (
-          <ScrollView>
-            {filteredExercises.map((ex) => (
+      <Modal visible={isExerciseModalVisible} animationType="slide" transparent>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <View>
+                <Text style={Typography.h4}>Catálogo</Text>
+                <Text style={[Typography.caption, { color: Colors.textMuted }]}>
+                  Selecciona un ejercicio para añadirlo
+                </Text>
+              </View>
               <TouchableOpacity
-                key={ex.id}
-                style={styles.exerciseItem}
-                onPress={() => addExercise(ex)}
+                onPress={() => setIsExerciseModalVisible(false)}
+                style={styles.closeButton}
               >
-                <View>
-                  <Text style={[Typography.body, { fontWeight: "600" }]}>
-                    {ex.name}
-                  </Text>
-                  <Text style={Typography.caption}>{ex.muscle_group}</Text>
-                </View>
-                <Plus size={20} color={Colors.primary} />
+                <X size={24} color={Colors.textPrimary} />
               </TouchableOpacity>
-            ))}
-          </ScrollView>
-        )}
+            </View>
+
+            <View style={styles.searchBar}>
+              <Search size={18} color={Colors.textMuted} />
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Buscar por nombre o grupo..."
+                placeholderTextColor={Colors.textMuted}
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+              />
+              {searchQuery.length > 0 && (
+                <TouchableOpacity onPress={() => setSearchQuery("")}>
+                  <X size={16} color={Colors.textMuted} />
+                </TouchableOpacity>
+              )}
+            </View>
+
+            {loadingExercises ? (
+              <View style={styles.loaderContainer}>
+                <ActivityIndicator size="large" color={Colors.primary} />
+                <Text style={[Typography.caption, { marginTop: 10 }]}>
+                  Cargando biblioteca...
+                </Text>
+              </View>
+            ) : (
+              <ScrollView
+                style={styles.exerciseList}
+                showsVerticalScrollIndicator={false}
+              >
+                {filteredExercises.map((ex) => (
+                  <TouchableOpacity
+                    key={ex.id}
+                    style={styles.exerciseItem}
+                    onPress={() => addExercise(ex)}
+                    activeOpacity={0.7}
+                  >
+                    <View style={styles.exerciseMainInfo}>
+                      <Text style={styles.exerciseNameText}>{ex.name}</Text>
+                      <View
+                        style={[
+                          styles.muscleBadge,
+                          { backgroundColor: getMuscleColor(ex.muscle_group) + "20" },
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.muscleBadgeText,
+                            { color: getMuscleColor(ex.muscle_group) },
+                          ]}
+                        >
+                          {ex.muscle_group}
+                        </Text>
+                      </View>
+                    </View>
+                    <View style={styles.addIconContainer}>
+                      <Plus size={20} color={Colors.primary} />
+                    </View>
+                  </TouchableOpacity>
+                ))}
+
+                {filteredExercises.length === 0 && (
+                  <View style={styles.modalEmptyState}>
+                    <Text style={{ color: Colors.textMuted }}>
+                      No se encontraron resultados para "{searchQuery}"
+                    </Text>
+                  </View>
+                )}
+                <View style={{ height: 40 }} />
+              </ScrollView>
+            )}
+          </View>
+        </View>
       </Modal>
     </View>
   );
@@ -316,30 +369,113 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   saveButtonText: { color: Colors.white, fontWeight: "800", fontSize: 16 },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(40, 40, 40, 0.85)",
+    justifyContent: "flex-end",
+  },
+  modalContent: {
+    backgroundColor: Colors.bg,
+    borderTopLeftRadius: BorderRadius.xl,
+    borderTopRightRadius: BorderRadius.xl,
+    height: "90%",
+    paddingTop: Spacing.sm,
+  },
   modalHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
-    padding: Spacing.lg,
+    alignItems: "center",
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,
+  },
+  closeButton: {
+    padding: 4,
+    backgroundColor: Colors.bgElevated,
+    borderRadius: 20,
   },
   searchBar: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: Colors.bgElevated,
+    backgroundColor: Colors.bgCard,
     margin: Spacing.lg,
     paddingHorizontal: Spacing.md,
-    borderRadius: BorderRadius.md,
+    height: 50,
+    borderRadius: BorderRadius.lg,
+    borderWidth: 1,
+    borderColor: Colors.border,
     gap: 10,
   },
-  searchInput: { flex: 1, height: 45, color: Colors.text },
+  searchInput: {
+    flex: 1,
+    color: Colors.textPrimary,
+    fontSize: 15,
+  },
+  exerciseList: {
+    paddingHorizontal: Spacing.lg,
+  },
   exerciseItem: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    padding: Spacing.lg,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
+    padding: Spacing.md,
+    backgroundColor: Colors.bgCard,
+    borderRadius: BorderRadius.lg,
+    marginBottom: Spacing.sm,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  exerciseMainInfo: {
+    flex: 1,
+    gap: 4,
+  },
+  exerciseNameText: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: Colors.textPrimary,
+  },
+  muscleBadge: {
+    alignSelf: "flex-start",
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: BorderRadius.sm,
+  },
+  muscleBadgeText: {
+    fontSize: 11,
+    fontWeight: "800",
+    textTransform: "uppercase",
+  },
+  addIconContainer: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: Colors.bg,
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  loaderContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  modalEmptyState: {
+    padding: Spacing.xl,
+    alignItems: "center",
   },
   emptyState: { padding: Spacing.xl, alignItems: "center" },
 });
+
+const getMuscleColor = (group: string) => {
+  const g = group.toLowerCase();
+  if (g.includes("pecho")) return Colors.primary;
+  if (g.includes("espalda")) return Colors.purple;
+  if (g.includes("pierna") || g.includes("isquios") || g.includes("cuadriceps"))
+    return Colors.success;
+  if (g.includes("hombro")) return Colors.orange;
+  if (g.includes("brazo") || g.includes("biceps") || g.includes("triceps"))
+    return Colors.info;
+  return Colors.textMuted;
+};

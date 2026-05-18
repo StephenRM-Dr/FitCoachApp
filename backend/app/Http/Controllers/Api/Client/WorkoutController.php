@@ -21,11 +21,11 @@ class WorkoutController extends Controller
     {
         $program = Program::where('client_id', $request->user()->id)
             ->where('status', 'active')
-            ->with('mesocycles.microcycles.workoutSessions')
+            ->with('mesocycles.microcycles.workoutSessions.sessionExercises.exercise')
             ->first();
             
         if (!$program) {
-            return response()->json(['message' => 'No active program found'], 404);
+            return response()->json(null, 200);
         }
         
         return response()->json($program);

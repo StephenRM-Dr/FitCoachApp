@@ -55,7 +55,7 @@ class ProgramController extends Controller
             return response()->json(['message' => 'Client not assigned to you'], 403);
         }
         
-        $programs = Program::where('client_id', $clientId)->with('mesocycles.microcycles')->get();
+        $programs = Program::where('client_id', $clientId)->with('mesocycles.microcycles.workoutSessions.sessionExercises.exercise')->get();
         return response()->json($programs);
     }
 }

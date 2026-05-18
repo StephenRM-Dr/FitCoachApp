@@ -1,163 +1,345 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
   ScrollView,
   TouchableOpacity,
   StyleSheet,
-  Alert,
+  TextInput,
+  LayoutAnimation,
+  Platform,
+  UIManager,
   ActivityIndicator,
+  Alert,
+  KeyboardAvoidingView,
+  TouchableWithoutFeedback,
+  Keyboard,
 } from "react-native";
-import { Play, Dumbbell, Save, Clock, CheckCircle } from "lucide-react-native";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  Play,
+  Dumbbell,
+  Save,
+  Clock,
+  CheckCircle,
+  ChevronDown,
+  ChevronUp,
+} from "lucide-react-native";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { workoutService } from "../../services/workoutService";
 import { Colors, Spacing, BorderRadius, Typography } from "../../theme";
-
-const EXERCISES = [
-  { name: "Sentadilla con Barra", sets: "3 x 10", weight: "100 kg" },
-  { name: "Remo con Pendlay", sets: "3 x 12", weight: "60 kg" },
-  { name: "Facepulls", sets: "3 x 15", weight: "20 kg" },
-];
+import { Program, WorkoutSession } from "../../types";
 
 export const WorkoutScreen = () => {
   const queryClient = useQueryClient();
+  const [selectedSessionId, setSelectedSessionId] = useState<number | null>(null);
+  const [exerciseSets, setExerciseSets] = useState<Record<number, any[]>>({});
+  const [expandedExerciseId, setExpandedExerciseId] = useState<number | null>(null);
+
+  if (Platform.OS === "android") {
+    if (UIManager.setLayoutAnimationEnabledExperimental) {
+      UIManager.setLayoutAnimationEnabledExperimental(true);
+    }
+  }
+
+  // 1. Obtener programa activo
+  const { data: activeProgram, isLoading: loadingProgram } = useQuery({
+    queryKey: ["active-program"],
+    queryFn: () => workoutService.getActiveProgram(),
+  });
+
+  // 2. Obtener detalles de la sesión seleccionada
+  const { data: sessionDetails, isLoading: loadingSession } = useQuery({
+    queryKey: ["session-details", selectedSessionId],
+    queryFn: () =>
+      selectedSessionId
+        ? workoutService.getSessionDetails(selectedSessionId)
+        : Promise.resolve(null),
+    enabled: !!selectedSessionId,
+  });
+
+  // Inicializar series cuando se carga la sesión
+  useEffect(() => {
+    if (sessionDetails?.session_exercises) {
+      const initialSets: Record<number, any[]> = {};
+      sessionDetails.session_exercises.forEach((se) => {
+        const setsCount = se.target_sets || 3;
+        initialSets[se.id] = Array.from({ length: setsCount }, (_, i) => ({
+          set_number: i + 1,
+          weight_kg: "",
+          reps_performed: String(se.target_reps || ""),
+          completed: false,
+          exercise_id: se.exercise_id,
+        }));
+      });
+      setExerciseSets(initialSets);
+    }
+  }, [sessionDetails]);
+
+  const toggleExercise = (id: number) => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setExpandedExerciseId(expandedExerciseId === id ? null : id);
+  };
+
+  const updateSetData = (
+    exerciseId: number,
+    setIndex: number,
+    field: string,
+    value: any,
+  ) => {
+    const updated = { ...exerciseSets };
+    updated[exerciseId][setIndex][field] = value;
+    setExerciseSets(updated);
+  };
+
+  const handleFinishWorkout = () => {
+    const allSets: any[] = [];
+    Object.keys(exerciseSets).forEach((exId) => {
+      exerciseSets[Number(exId)].forEach((set) => {
+        if (set.completed) {
+          allSets.push({
+            exercise_id: set.exercise_id,
+            set_number: set.set_number,
+            weight_kg: parseFloat(set.weight_kg) || 0,
+            reps_performed: parseInt(set.reps_performed) || 0,
+          });
+        }
+      });
+    });
+
+    if (allSets.length === 0) {
+      Alert.alert("Aviso", "Marca al menos una serie como completada.");
+      return;
+    }
+
+    finishSessionMutation.mutate({
+      workout_session_id: selectedSessionId,
+      started_at: new Date().toISOString(),
+      completed_at: new Date().toISOString(),
+      sets: allSets,
+    });
+  };
 
   const finishSessionMutation = useMutation({
-    mutationFn: async () => {
-      // Mocking the completion of the current exercise for the MVP
-      await workoutService.saveWorkoutLog({
-        exercise_name: "Press de Banca",
-        sets: 4,
-        reps: 8,
-        weight_kg: 85,
-        rpe: 8,
-        rir: 2,
-        session_date: new Date().toISOString().split("T")[0],
-      });
+    mutationFn: async (executionData: any) => {
+      await workoutService.storeExecution(executionData);
     },
     onSuccess: () => {
       Alert.alert("¡Excelente!", "Entrenamiento guardado con éxito.");
       queryClient.invalidateQueries({ queryKey: ["workout-logs"] });
+      setSelectedSessionId(null);
     },
     onError: () => {
       Alert.alert("Error", "No se pudo guardar el entrenamiento.");
     },
   });
 
+  if (loadingProgram) {
+    return (
+      <View style={[styles.container, styles.center]}>
+        <ActivityIndicator size="large" color={Colors.primary} />
+      </View>
+    );
+  }
+
+  if (!activeProgram) {
+    return (
+      <View style={[styles.container, styles.center, { padding: Spacing.xl }]}>
+        <Dumbbell size={64} color={Colors.textMuted} />
+        <Text
+          style={[
+            Typography.h4,
+            { textAlign: "center", marginTop: Spacing.lg, color: Colors.white },
+          ]}
+        >
+          No tienes un programa activo
+        </Text>
+        <Text
+          style={[
+            Typography.body,
+            { textAlign: "center", color: Colors.textMuted, marginTop: 8 },
+          ]}
+        >
+          Contacta a tu coach para que asigne tu planificación.
+        </Text>
+      </View>
+    );
+  }
+
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={Typography.h3}>Entrenamiento</Text>
-        <Text style={[Typography.bodySmall, { marginTop: Spacing.xs }]}>
-          Sesión actual: Fuerza Base A
-        </Text>
-      </View>
-
-      {/* Current Exercise Card */}
-      <View style={styles.currentExercise}>
-        <View style={styles.currentExHeader}>
-          <Text style={styles.currentExName}>Press de Banca</Text>
-          <View style={styles.currentExBadge}>
-            <Text style={styles.currentExBadgeText}>4 Series x 8 Reps</Text>
-          </View>
-        </View>
-
-        <View style={styles.currentExStats}>
-          <View>
-            <Text style={styles.currentExLabel}>PESO</Text>
-            <Text style={styles.currentExValue}>85 kg</Text>
-          </View>
-          <View>
-            <Text style={styles.currentExLabel}>RPE OBJETIVO</Text>
-            <Text style={styles.currentExValue}>8</Text>
-          </View>
-          <View>
-            <Text style={styles.currentExLabel}>DESCANSO</Text>
-            <Text style={styles.currentExValue}>3 min</Text>
-          </View>
-        </View>
-
-        <TouchableOpacity style={styles.startButton} activeOpacity={0.8}>
-          <Play size={20} color={Colors.primary} fill={Colors.primary} />
-          <Text style={styles.startButtonText}>Iniciar Serie 1</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Progress indicator */}
-      <View style={styles.progressCard}>
-        <View style={styles.progressHeader}>
-          <Clock size={18} color={Colors.textSecondary} />
-          <Text style={[Typography.label, { marginLeft: Spacing.sm }]}>
-            Progreso de la Sesión
-          </Text>
-        </View>
-        <View style={styles.progressBarBg}>
-          <View style={[styles.progressBarFill, { width: "25%" }]} />
-        </View>
-        <Text style={Typography.caption}>1 de 4 ejercicios completados</Text>
-      </View>
-
-      {/* Next Exercises */}
-      <View style={styles.card}>
-        <Text style={[Typography.h5, { marginBottom: Spacing.md }]}>
-          Próximos Ejercicios
-        </Text>
-        {EXERCISES.map((ex, i) => (
-          <View
-            key={i}
-            style={[
-              styles.exerciseRow,
-              i < EXERCISES.length - 1 && {
-                borderBottomWidth: 1,
-                borderBottomColor: Colors.border,
-              },
-            ]}
-          >
-            <View style={styles.exerciseIcon}>
-              <Dumbbell size={18} color={Colors.textSecondary} />
-            </View>
-            <View style={styles.exerciseInfo}>
-              <Text
-                style={[Typography.body, { fontWeight: "600", fontSize: 14 }]}
-              >
-                {ex.name}
-              </Text>
-              <Text style={Typography.caption}>{ex.sets}</Text>
-            </View>
-            <Text
-              style={[Typography.body, { fontWeight: "700", fontSize: 14 }]}
-            >
-              {ex.weight}
-            </Text>
-          </View>
-        ))}
-      </View>
-
-      {/* Finish button */}
-      <TouchableOpacity
-        style={styles.finishButton}
-        activeOpacity={0.8}
-        onPress={() => finishSessionMutation.mutate()}
-        disabled={finishSessionMutation.isPending}
+    <KeyboardAvoidingView
+      style={{ flex: 1, backgroundColor: Colors.bg }}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      keyboardVerticalOffset={Platform.OS === "ios" ? 100 : 120}
+    >
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps="handled"
       >
-        {finishSessionMutation.isPending ? (
-          <ActivityIndicator color={Colors.white} />
-        ) : (
-          <>
-            <Save size={20} color={Colors.white} />
-            <Text
-              style={[
-                Typography.buttonText,
-                { color: Colors.white, marginLeft: Spacing.sm },
-              ]}
-            >
-              Finalizar Sesión
-            </Text>
-          </>
-        )}
-      </TouchableOpacity>
-    </ScrollView>
+        {/* Header */}
+        <View style={styles.header}>
+        <Text style={Typography.h3}>Mi Entrenamiento</Text>
+        <Text style={[Typography.bodySmall, { color: Colors.primary }]}>
+          {activeProgram.name}
+        </Text>
+      </View>
+
+      {/* Selector de Sesión */}
+      {!selectedSessionId ? (
+        <View>
+          <Text style={[Typography.h5, { marginBottom: Spacing.md }]}>
+            Selecciona tu sesión de hoy:
+          </Text>
+          {activeProgram.mesocycles?.[0]?.microcycles?.[0]?.workout_sessions?.map(
+            (session) => (
+              <TouchableOpacity
+                key={session.id}
+                style={styles.sessionSelectCard}
+                onPress={() => setSelectedSessionId(session.id)}
+              >
+                <View>
+                  <Text style={styles.sessionSelectTitle}>{session.name}</Text>
+                  <Text style={Typography.caption}>
+                    {session.day_of_week || "Día flexible"} •{" "}
+                    {session.session_exercises?.length || 0} ejercicios
+                  </Text>
+                </View>
+                <Play size={20} color={Colors.primary} />
+              </TouchableOpacity>
+            ),
+          )}
+        </View>
+      ) : loadingSession ? (
+        <ActivityIndicator color={Colors.primary} />
+      ) : (
+        <>
+          <View style={styles.sessionHeaderRow}>
+            <Text style={Typography.h4}>{sessionDetails?.name}</Text>
+            <TouchableOpacity onPress={() => setSelectedSessionId(null)}>
+              <Text style={{ color: Colors.primary   , fontWeight: "600" }}>
+                Cambiar
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Lista de Ejercicios */}
+          <View style={{ gap: Spacing.md }}>
+            {sessionDetails?.session_exercises?.map((se) => (
+              <View key={se.id} style={styles.exerciseExpandableCard}>
+                <TouchableOpacity
+                  style={styles.exerciseHeader}
+                  onPress={() => toggleExercise(se.id)}
+                  activeOpacity={0.7}
+                >
+                  <View style={styles.exerciseIcon}>
+                    <Dumbbell size={20} color={Colors.primary} />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.exerciseTitle}>{se.exercise?.name}</Text>
+                    <Text style={Typography.caption}>
+                      Objetivo: {se.target_sets} x {se.target_reps} @RPE{" "}
+                      {se.target_rpe}
+                    </Text>
+                  </View>
+                  {expandedExerciseId === se.id ? (
+                    <ChevronUp size={20} color={Colors.textMuted} />
+                  ) : (
+                    <ChevronDown size={20} color={Colors.textMuted} />
+                  )}
+                </TouchableOpacity>
+
+                {expandedExerciseId === se.id && (
+                  <View style={styles.setsContainer}>
+                    <View style={styles.setsHeader}>
+                      <Text style={[styles.setHeaderText, { width: 40 }]}>
+                        SET
+                      </Text>
+                      <Text style={[styles.setHeaderText, { flex: 1 }]}>
+                        PESO (KG)
+                      </Text>
+                      <Text style={[styles.setHeaderText, { flex: 1 }]}>
+                        REPS
+                      </Text>
+                      <View style={{ width: 40 }} />
+                    </View>
+
+                    {exerciseSets[se.id]?.map((set, idx) => (
+                      <View key={idx} style={styles.setRow}>
+                        <Text style={styles.setNumber}>{set.set_number}</Text>
+                        <TextInput
+                          style={styles.setInput}
+                          placeholder="0"
+                          placeholderTextColor={Colors.textMuted}
+                          keyboardType="numeric"
+                          value={set.weight_kg}
+                          onChangeText={(v) =>
+                            updateSetData(se.id, idx, "weight_kg", v)
+                          }
+                        />
+                        <TextInput
+                          style={styles.setInput}
+                          placeholder="0"
+                          placeholderTextColor={Colors.textMuted}
+                          keyboardType="numeric"
+                          value={set.reps_performed}
+                          onChangeText={(v) =>
+                            updateSetData(se.id, idx, "reps_performed", v)
+                          }
+                        />
+                        <TouchableOpacity
+                          onPress={() =>
+                            updateSetData(
+                              se.id,
+                              idx,
+                              "completed",
+                              !set.completed,
+                            )
+                          }
+                          style={[
+                            styles.checkButton,
+                            set.completed && styles.checkButtonActive,
+                          ]}
+                        >
+                          <CheckCircle
+                            size={20}
+                            color={set.completed ? Colors.white : Colors.border}
+                          />
+                        </TouchableOpacity>
+                      </View>
+                    ))}
+                  </View>
+                )}
+              </View>
+            ))}
+          </View>
+
+          {/* Finish button */}
+          <TouchableOpacity
+            style={styles.finishButton}
+            activeOpacity={0.8}
+            onPress={handleFinishWorkout}
+            disabled={finishSessionMutation.isPending}
+          >
+            {finishSessionMutation.isPending ? (
+              <ActivityIndicator color={Colors.white} />
+            ) : (
+              <>
+                <Save size={20} color={Colors.white} />
+                <Text
+                  style={[
+                    Typography.buttonText,
+                    { color: Colors.white, marginLeft: Spacing.sm },
+                  ]}
+                >
+                  Registrar Entrenamiento
+                </Text>
+              </>
+            )}
+          </TouchableOpacity>
+        </>
+      )}
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 };
 
@@ -168,7 +350,7 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: Spacing.base,
-    paddingBottom: Spacing["3xl"],
+    paddingBottom: 200,
   },
   header: {
     marginBottom: Spacing.lg,
@@ -283,6 +465,105 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: 2,
   },
+  center: {
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  sessionSelectCard: {
+    backgroundColor: Colors.bgCard,
+    padding: Spacing.lg,
+    borderRadius: BorderRadius.lg,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: Spacing.md,
+    borderLeftWidth: 4,
+    borderLeftColor: Colors.primary,
+  },
+  sessionSelectTitle: {
+    color: Colors.white,
+    fontSize: 16,
+    fontWeight: "700",
+    marginBottom: 2,
+  },
+  sessionHeaderRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: Spacing.lg,
+  },
+  exerciseExpandableCard: {
+    backgroundColor: Colors.bgCard,
+    borderRadius: BorderRadius.lg,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  exerciseHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: Spacing.md,
+    gap: Spacing.md,
+  },
+  exerciseTitle: {
+    color: Colors.white,
+    fontSize: 16,
+    fontWeight: "700",
+  },
+  setsContainer: {
+    paddingHorizontal: Spacing.md,
+    paddingBottom: Spacing.md,
+    backgroundColor: "rgba(0,0,0,0.1)",
+  },
+  setsHeader: {
+    flexDirection: "row",
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+    marginBottom: 8,
+  },
+  setHeaderText: {
+    color: Colors.textMuted,
+    fontSize: 10,
+    fontWeight: "800",
+    textAlign: "center",
+  },
+  setRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 8,
+    gap: 8,
+  },
+  setNumber: {
+    width: 40,
+    textAlign: "center",
+    color: Colors.white,
+    fontWeight: "700",
+  },
+  setInput: {
+    flex: 1,
+    backgroundColor: Colors.bg,
+    color: Colors.white,
+    borderRadius: BorderRadius.sm,
+    padding: 8,
+    textAlign: "center",
+    fontSize: 14,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  checkButton: {
+    width: 40,
+    height: 40,
+    justifyContent: "center",
+    alignItems: "center",
+    borderRadius: BorderRadius.sm,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  checkButtonActive: {
+    backgroundColor: Colors.success,
+    borderColor: Colors.success,
+  },
   finishButton: {
     backgroundColor: Colors.success,
     paddingVertical: Spacing.base,
@@ -290,6 +571,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
+    marginTop: Spacing.lg,
     marginBottom: Spacing.lg,
     shadowColor: Colors.success,
     shadowOffset: { width: 0, height: 4 },
