@@ -24,7 +24,15 @@ export const LoginScreen = ({ navigation }: any) => {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
+  const [resetStep, setResetStep] = useState<"email" | "code">("email");
+  const [resetCode, setResetCode] = useState("");
   const { setAuth, setError, error, clearError } = useAuthStore();
+
+  const closeResetModal = () => {
+    setModalVisible(false);
+    setResetStep("email");
+    setResetCode("");
+  };
 
   const handleResetPassword = async () => {
     if (!email.trim()) {
@@ -34,17 +42,40 @@ export const LoginScreen = ({ navigation }: any) => {
 
     try {
       setLoading(true);
-      const res = await authService.resetPassword(email.trim());
-      Alert.alert(
-        "Éxito",
-        res.message ||
-          "Se ha enviado una nueva contraseña a tu correo electrónico.",
-      );
-      setModalVisible(false);
+      await authService.resetPassword(email.trim());
+      setResetStep("code");
     } catch (err: any) {
       const message =
         err.response?.data?.message ||
         "Error al intentar restablecer la contraseña.";
+      Alert.alert("Error", message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleConfirmResetCode = async () => {
+    if (!resetCode.trim()) {
+      Alert.alert("Error", "Ingresa el código que recibiste por correo.");
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const data = await authService.confirmResetCode(
+        email.trim(),
+        resetCode.trim(),
+      );
+      closeResetModal();
+      setAuth(
+        { ...data.user, role: data.user.role || "client" },
+        data.access_token,
+      );
+    } catch (err: any) {
+      const message =
+        err.response?.data?.errors?.code?.[0] ||
+        err.response?.data?.message ||
+        "Código inválido o expirado.";
       Alert.alert("Error", message);
     } finally {
       setLoading(false);
@@ -180,48 +211,107 @@ export const LoginScreen = ({ navigation }: any) => {
             animationType="slide"
             transparent={true}
             visible={modalVisible}
-            onRequestClose={() => setModalVisible(false)}
+            onRequestClose={closeResetModal}
           >
             <View style={styles.modalOverlay}>
               <View style={styles.modalContent}>
-                {/* Encabezado del modal */}
-                <View style={styles.modalHeader}>
-                  <Text style={styles.modalTitle}>Recuperar Contraseña</Text>
-                  <Text style={styles.modalSubtitle}>
-                    Ingresa tu correo electrónico para enviarte un enlace de
-                    restablecimiento.
-                  </Text>
-                </View>
+                {resetStep === "email" ? (
+                  <>
+                    <View style={styles.modalHeader}>
+                      <Text style={styles.modalTitle}>
+                        Recuperar Contraseña
+                      </Text>
+                      <Text style={styles.modalSubtitle}>
+                        Ingresa tu correo electrónico y te enviaremos un código
+                        de verificación.
+                      </Text>
+                    </View>
 
-                {/* Campo de correo */}
-                <View style={styles.inputWrapper}>
-                  <Mail size={20} color={Colors.textMuted} />
-                  <TextInput
-                    style={styles.input}
-                    placeholder="tu@email.com"
-                    placeholderTextColor={Colors.textMuted}
-                    value={email}
-                    onChangeText={setEmail}
-                    keyboardType="email-address"
-                    autoCapitalize="none"
-                  />
-                </View>
+                    <View style={styles.inputWrapper}>
+                      <Mail size={20} color={Colors.textMuted} />
+                      <TextInput
+                        style={styles.input}
+                        placeholder="tu@email.com"
+                        placeholderTextColor={Colors.textMuted}
+                        value={email}
+                        onChangeText={setEmail}
+                        keyboardType="email-address"
+                        autoCapitalize="none"
+                      />
+                    </View>
 
-                {/* Botones de acción */}
-                <View style={styles.modalButtons}>
-                  <TouchableOpacity
-                    style={[styles.modalButton, styles.cancelButton]}
-                    onPress={() => setModalVisible(false)}
-                  >
-                    <Text style={styles.cancelButtonText}>Cancelar</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[styles.modalButton, styles.resetButton]}
-                    onPress={handleResetPassword}
-                  >
-                    <Text style={styles.modalButtonText}>Restablecer</Text>
-                  </TouchableOpacity>
-                </View>
+                    <View style={styles.modalButtons}>
+                      <TouchableOpacity
+                        style={[styles.modalButton, styles.cancelButton]}
+                        onPress={closeResetModal}
+                      >
+                        <Text style={styles.cancelButtonText}>Cancelar</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[styles.modalButton, styles.resetButton]}
+                        onPress={handleResetPassword}
+                        disabled={loading}
+                      >
+                        {loading ? (
+                          <ActivityIndicator
+                            color={Colors.white}
+                            size="small"
+                          />
+                        ) : (
+                          <Text style={styles.modalButtonText}>
+                            Enviar código
+                          </Text>
+                        )}
+                      </TouchableOpacity>
+                    </View>
+                  </>
+                ) : (
+                  <>
+                    <View style={styles.modalHeader}>
+                      <Text style={styles.modalTitle}>Ingresa el código</Text>
+                      <Text style={styles.modalSubtitle}>
+                        Si el correo está registrado, recibirás un código de 6
+                        dígitos válido por 15 minutos.
+                      </Text>
+                    </View>
+
+                    <View style={styles.inputWrapper}>
+                      <Lock size={20} color={Colors.textMuted} />
+                      <TextInput
+                        style={styles.input}
+                        placeholder="123456"
+                        placeholderTextColor={Colors.textMuted}
+                        value={resetCode}
+                        onChangeText={setResetCode}
+                        keyboardType="number-pad"
+                        maxLength={6}
+                      />
+                    </View>
+
+                    <View style={styles.modalButtons}>
+                      <TouchableOpacity
+                        style={[styles.modalButton, styles.cancelButton]}
+                        onPress={closeResetModal}
+                      >
+                        <Text style={styles.cancelButtonText}>Cancelar</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[styles.modalButton, styles.resetButton]}
+                        onPress={handleConfirmResetCode}
+                        disabled={loading}
+                      >
+                        {loading ? (
+                          <ActivityIndicator
+                            color={Colors.white}
+                            size="small"
+                          />
+                        ) : (
+                          <Text style={styles.modalButtonText}>Confirmar</Text>
+                        )}
+                      </TouchableOpacity>
+                    </View>
+                  </>
+                )}
               </View>
             </View>
           </Modal>

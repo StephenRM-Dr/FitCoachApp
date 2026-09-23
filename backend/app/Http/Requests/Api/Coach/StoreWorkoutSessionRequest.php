@@ -21,7 +21,7 @@ class StoreWorkoutSessionRequest extends FormRequest
     {
         return [
             'name' => 'required|string|max:100',
-            'day_of_week' => 'nullable|string|max:20',
+            'day_of_week' => 'nullable|in:lunes,martes,miercoles,jueves,viernes,sabado,domingo',
             'exercises' => 'required|array',
             'exercises.*.exercise_id' => 'required|exists:exercises,id',
             'exercises.*.target_sets' => 'nullable|integer',

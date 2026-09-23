@@ -3,11 +3,16 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\UserResource;
 use App\Models\User;
 use App\Models\CoachClient;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 
+/**
+ * Relación coach ↔ cliente. Los checks de rol los aplica el middleware
+ * 'role:coach' / 'role:client' definido en routes/api.php.
+ */
 class CoachController extends Controller
 {
     /**
@@ -15,12 +20,11 @@ class CoachController extends Controller
      */
     public function getAvailableClients()
     {
-        $assignedClientIds = CoachClient::pluck('client_id')->toArray();
         $availableClients = User::where('role', 'client')
-            ->whereNotIn('id', $assignedClientIds)
+            ->whereDoesntHave('coachAssignment')
             ->get();
 
-        return response()->json($availableClients);
+        return UserResource::collection($availableClients);
     }
 
     /**
@@ -32,22 +36,19 @@ class CoachController extends Controller
             'client_id' => 'required|exists:users,id'
         ]);
 
-        $clientId = $request->client_id;
-        $coachId = $request->user()->id;
+        $client = User::findOrFail($request->client_id);
 
-        // Check if user is actually a coach
-        if ($request->user()->role !== 'coach') {
-            return response()->json(['error' => 'Solo los coaches pueden asignar alumnos.'], 403);
+        if ($client->role !== 'client') {
+            return response()->json(['error' => 'El usuario indicado no es un asesorado.'], 422);
         }
 
-        // Check if client is already assigned
-        if (CoachClient::where('client_id', $clientId)->exists()) {
+        if ($client->coachAssignment()->exists()) {
             return response()->json(['error' => 'El alumno ya tiene un coach asignado.'], 400);
         }
 
         $assignment = CoachClient::create([
-            'coach_id' => $coachId,
-            'client_id' => $clientId
+            'coach_id' => $request->user()->id,
+            'client_id' => $client->id,
         ]);
 
         return response()->json([
@@ -61,17 +62,11 @@ class CoachController extends Controller
      */
     public function getMyClients(Request $request)
     {
-        if ($request->user()->role !== 'coach') {
-            return response()->json(['error' => 'No autorizado'], 403);
-        }
-
-        $clients = User::whereIn('id', function($query) use ($request) {
-            $query->select('client_id')
-                  ->from('coach_clients')
-                  ->where('coach_id', $request->user()->id);
+        $clients = User::whereHas('coachAssignment', function ($query) use ($request) {
+            $query->where('coach_id', $request->user()->id);
         })->get();
 
-        return response()->json($clients);
+        return UserResource::collection($clients);
     }
 
     /**
@@ -79,16 +74,15 @@ class CoachController extends Controller
      */
     public function getMyCoach(Request $request)
     {
-        if ($request->user()->role !== 'client') {
-            return response()->json(['error' => 'No autorizado'], 403);
-        }
-
-        $assignment = CoachClient::where('client_id', $request->user()->id)->with('coach')->first();
+        $assignment = $request->user()->coachAssignment()->with('coach')->first();
 
         if (!$assignment) {
-            return response()->json(null);
+            // response()->json(null) serializa a "{}", no a "null" (Symfony
+            // sustituye un $data null por un ArrayObject vacío). Se usa
+            // fromJsonString para devolver el literal JSON null real.
+            return JsonResponse::fromJsonString('null');
         }
 
-        return response()->json($assignment->coach);
+        return new UserResource($assignment->coach);
     }
 }

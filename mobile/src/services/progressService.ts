@@ -28,7 +28,8 @@ export const progressService = {
     data: Partial<Anthropometric>,
     clientId?: number,
   ) => {
-    const payload = clientId ? { ...data, client_id: clientId } : data;
+    const base = { recorded_at: new Date().toISOString(), ...data };
+    const payload = clientId ? { ...base, client_id: clientId } : base;
     const response = await api.post("/anthropometrics", payload);
     return response.data;
   },

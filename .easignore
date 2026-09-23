@@ -1,0 +1,5 @@
+backend/vendor/
+backend/storage/
+backend/public/storage
+backend/bootstrap/cache/
+/src/

@@ -20,15 +20,11 @@ export const workoutService = {
     return response.data;
   },
 
-  // Obtener historial de ejecuciones
-  getExecutionHistory: async () => {
-    const response = await api.get("/client/executions/history");
-    return response.data as WorkoutExecution[];
-  },
-
-  // Legacy fallback (if still needed for some components)
-  saveWorkoutLog: async (data: any) => {
-    const response = await api.post("/workout-logs", data);
-    return response.data;
+  // Obtener historial de ejecuciones (endpoint paginado)
+  getExecutionHistory: async (page = 1, perPage = 20) => {
+    const response = await api.get("/client/executions/history", {
+      params: { page, per_page: perPage },
+    });
+    return response.data.data as WorkoutExecution[];
   },
 };

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Coach;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\MesocycleResource;
 use Illuminate\Http\Request;
 
 use App\Models\Mesocycle;
@@ -35,6 +36,6 @@ class MesocycleController extends Controller
             'end_week' => $request->end_week,
         ]);
         
-        return response()->json($mesocycle, 201);
+        return (new MesocycleResource($mesocycle))->response()->setStatusCode(201);
     }
 }

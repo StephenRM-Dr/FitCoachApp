@@ -10,9 +10,7 @@ import {
 import {
   TrendingUp,
   TrendingDown,
-  Award,
   Target,
-  ChevronUp,
   Minus,
   Activity,
 } from "lucide-react-native";
@@ -34,13 +32,6 @@ const WEIGHT_DATA = [
   { week: "S8", value: 78.8 },
 ];
 
-const PERSONAL_RECORDS = [
-  { exercise: "Sentadilla", current: 120, previous: 110, unit: "kg" },
-  { exercise: "Press Banca", current: 90, previous: 85, unit: "kg" },
-  { exercise: "Peso Muerto", current: 140, previous: 130, unit: "kg" },
-  { exercise: "Press Militar", current: 55, previous: 52.5, unit: "kg" },
-];
-
 const BODY_MEASUREMENTS = [
   { name: "Pecho", value: "102 cm", trend: "up" },
   { name: "Cintura", value: "82 cm", trend: "down" },
@@ -49,9 +40,7 @@ const BODY_MEASUREMENTS = [
 ];
 
 export function ProgressScreen() {
-  const [activeTab, setActiveTab] = useState<"weight" | "strength" | "body">(
-    "weight",
-  );
+  const [activeTab, setActiveTab] = useState<"weight" | "body">("weight");
 
   const { data: measurements = [], isLoading } = useQuery({
     queryKey: ["anthropometrics"],
@@ -85,24 +74,32 @@ export function ProgressScreen() {
   const latestMeasure = measurements[0] || {};
   const previousMeasure = measurements[1] || {};
 
+  const getTrend = (
+    current?: number | string | null,
+    previous?: number | string | null,
+  ): "up" | "down" | "flat" => {
+    if (current == null || previous == null) return "flat";
+    const c = Number(current);
+    const p = Number(previous);
+    if (Number.isNaN(c) || Number.isNaN(p) || c === p) return "flat";
+    return c > p ? "up" : "down";
+  };
+
   const bodyMeasurements = [
     {
       name: "Cintura",
       value: latestMeasure.waist_cm ? `${latestMeasure.waist_cm} cm` : "--",
-      trend:
-        latestMeasure.waist_cm < (previousMeasure.waist_cm || 999)
-          ? "down"
-          : "up",
+      trend: getTrend(latestMeasure.waist_cm, previousMeasure.waist_cm),
     },
     {
       name: "Cadera",
       value: latestMeasure.hip_cm ? `${latestMeasure.hip_cm} cm` : "--",
-      trend: "up",
+      trend: getTrend(latestMeasure.hip_cm, previousMeasure.hip_cm),
     },
     {
       name: "FCR (Reposo)",
       value: latestMeasure.fcr_lpm ? `${latestMeasure.fcr_lpm} lpm` : "--",
-      trend: "down",
+      trend: getTrend(latestMeasure.fcr_lpm, previousMeasure.fcr_lpm),
     },
   ];
 
@@ -124,13 +121,9 @@ export function ProgressScreen() {
           </Text>
           <Text style={Typography.caption}>Peso perdido</Text>
         </View>
-        <View style={[styles.summaryCard, { borderLeftColor: Colors.primary }]}>
-          <Text style={styles.summaryValue}>4</Text>
-          <Text style={Typography.caption}>PRs este mes</Text>
-        </View>
         <View style={[styles.summaryCard, { borderLeftColor: Colors.purple }]}>
-          <Text style={styles.summaryValue}>8</Text>
-          <Text style={Typography.caption}>Semanas</Text>
+          <Text style={styles.summaryValue}>{weightData.length}</Text>
+          <Text style={Typography.caption}>Semanas registradas</Text>
         </View>
       </View>
 
@@ -139,7 +132,6 @@ export function ProgressScreen() {
         {(
           [
             { key: "weight", label: "Peso" },
-            { key: "strength", label: "Fuerza" },
             { key: "body", label: "Medidas" },
           ] as const
         ).map((tab) => (
@@ -254,58 +246,6 @@ export function ProgressScreen() {
               </Text>
             </View>
           )}
-        </View>
-      )}
-
-      {/* Strength Tab */}
-      {activeTab === "strength" && (
-        <View style={styles.card}>
-          <View style={styles.cardHeader}>
-            <Award size={20} color={Colors.warning} />
-            <Text style={[Typography.h5, { marginLeft: Spacing.sm }]}>
-              Marcas Personales (1RM)
-            </Text>
-          </View>
-
-          {PERSONAL_RECORDS.map((pr, index) => {
-            const improvement = pr.current - pr.previous;
-            const percentage = ((improvement / pr.previous) * 100).toFixed(1);
-            return (
-              <View
-                key={index}
-                style={[
-                  styles.prRow,
-                  index < PERSONAL_RECORDS.length - 1 && styles.prRowBorder,
-                ]}
-              >
-                <View style={styles.prLeft}>
-                  <Text style={[Typography.body, { fontWeight: "600" }]}>
-                    {pr.exercise}
-                  </Text>
-                  <Text style={Typography.caption}>
-                    Anterior: {pr.previous} {pr.unit}
-                  </Text>
-                </View>
-                <View style={styles.prRight}>
-                  <Text style={[Typography.h4, { color: Colors.warning }]}>
-                    {pr.current} {pr.unit}
-                  </Text>
-                  <View style={styles.prBadge}>
-                    <ChevronUp size={12} color={Colors.success} />
-                    <Text
-                      style={{
-                        color: Colors.success,
-                        fontSize: 11,
-                        fontWeight: "700",
-                      }}
-                    >
-                      +{improvement} ({percentage}%)
-                    </Text>
-                  </View>
-                </View>
-              </View>
-            );
-          })}
         </View>
       )}
 
@@ -438,32 +378,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 4,
   },
-  prRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: Spacing.md,
-  },
   prRowBorder: {
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,
-  },
-  prLeft: {
-    flex: 1,
-    gap: 2,
-  },
-  prRight: {
-    alignItems: "flex-end",
-    gap: 4,
-  },
-  prBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 2,
-    backgroundColor: "rgba(16, 185, 129, 0.15)",
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: 2,
-    borderRadius: BorderRadius.sm,
   },
   measureRow: {
     flexDirection: "row",

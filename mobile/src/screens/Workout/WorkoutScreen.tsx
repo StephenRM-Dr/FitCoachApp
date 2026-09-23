@@ -8,13 +8,14 @@ import {
   TextInput,
   LayoutAnimation,
   Platform,
-  UIManager,
   ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
   TouchableWithoutFeedback,
   Keyboard,
+  Modal,
 } from "react-native";
+import { Image } from "expo-image";
 import {
   Play,
   Dumbbell,
@@ -23,23 +24,31 @@ import {
   CheckCircle,
   ChevronDown,
   ChevronUp,
+  Eye,
+  X,
 } from "lucide-react-native";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { workoutService } from "../../services/workoutService";
 import { Colors, Spacing, BorderRadius, Typography } from "../../theme";
-import { Program, WorkoutSession } from "../../types";
+import { Program, WorkoutSession, DAY_OF_WEEK_LABELS } from "../../types";
 
 export const WorkoutScreen = () => {
   const queryClient = useQueryClient();
-  const [selectedSessionId, setSelectedSessionId] = useState<number | null>(null);
+  const [selectedSessionId, setSelectedSessionId] = useState<number | null>(
+    null,
+  );
   const [exerciseSets, setExerciseSets] = useState<Record<number, any[]>>({});
-  const [expandedExerciseId, setExpandedExerciseId] = useState<number | null>(null);
-
-  if (Platform.OS === "android") {
-    if (UIManager.setLayoutAnimationEnabledExperimental) {
-      UIManager.setLayoutAnimationEnabledExperimental(true);
-    }
-  }
+  const [expandedExerciseId, setExpandedExerciseId] = useState<number | null>(
+    null,
+  );
+  // Un comentario por ejercicio (no por set), clave = session_exercise.id.
+  const [exerciseNotes, setExerciseNotes] = useState<Record<number, string>>(
+    {},
+  );
+  // Imagen de referencia bajo demanda: no se pide/renderiza hasta que el
+  // asesorado toca el ojo. expo-image cachea en disco, así que una vez
+  // vista no se vuelve a descargar aunque se cierre y reabra el modal.
+  const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
 
   // 1. Obtener programa activo
   const { data: activeProgram, isLoading: loadingProgram } = useQuery({
@@ -72,6 +81,7 @@ export const WorkoutScreen = () => {
         }));
       });
       setExerciseSets(initialSets);
+      setExerciseNotes({});
     }
   }, [sessionDetails]);
 
@@ -88,12 +98,16 @@ export const WorkoutScreen = () => {
   ) => {
     const updated = { ...exerciseSets };
     updated[exerciseId][setIndex][field] = value;
+    if ((field === "weight_kg" || field === "reps_performed") && value !== "") {
+      updated[exerciseId][setIndex].completed = true;
+    }
     setExerciseSets(updated);
   };
 
   const handleFinishWorkout = () => {
     const allSets: any[] = [];
     Object.keys(exerciseSets).forEach((exId) => {
+      const notes = exerciseNotes[Number(exId)]?.trim() || null;
       exerciseSets[Number(exId)].forEach((set) => {
         if (set.completed) {
           allSets.push({
@@ -101,6 +115,7 @@ export const WorkoutScreen = () => {
             set_number: set.set_number,
             weight_kg: parseFloat(set.weight_kg) || 0,
             reps_performed: parseInt(set.reps_performed) || 0,
+            notes,
           });
         }
       });
@@ -178,167 +193,236 @@ export const WorkoutScreen = () => {
       >
         {/* Header */}
         <View style={styles.header}>
-        <Text style={Typography.h3}>Mi Entrenamiento</Text>
-        <Text style={[Typography.bodySmall, { color: Colors.primary }]}>
-          {activeProgram.name}
-        </Text>
-      </View>
-
-      {/* Selector de Sesión */}
-      {!selectedSessionId ? (
-        <View>
-          <Text style={[Typography.h5, { marginBottom: Spacing.md }]}>
-            Selecciona tu sesión de hoy:
+          <Text style={Typography.h3}>Mi Entrenamiento</Text>
+          <Text style={[Typography.bodySmall, { color: Colors.primary }]}>
+            {activeProgram.name}
           </Text>
-          {activeProgram.mesocycles?.[0]?.microcycles?.[0]?.workout_sessions?.map(
-            (session) => (
-              <TouchableOpacity
-                key={session.id}
-                style={styles.sessionSelectCard}
-                onPress={() => setSelectedSessionId(session.id)}
-              >
-                <View>
-                  <Text style={styles.sessionSelectTitle}>{session.name}</Text>
-                  <Text style={Typography.caption}>
-                    {session.day_of_week || "Día flexible"} •{" "}
-                    {session.session_exercises?.length || 0} ejercicios
-                  </Text>
-                </View>
-                <Play size={20} color={Colors.primary} />
-              </TouchableOpacity>
-            ),
-          )}
         </View>
-      ) : loadingSession ? (
-        <ActivityIndicator color={Colors.primary} />
-      ) : (
-        <>
-          <View style={styles.sessionHeaderRow}>
-            <Text style={Typography.h4}>{sessionDetails?.name}</Text>
-            <TouchableOpacity onPress={() => setSelectedSessionId(null)}>
-              <Text style={{ color: Colors.primary   , fontWeight: "600" }}>
-                Cambiar
-              </Text>
-            </TouchableOpacity>
-          </View>
 
-          {/* Lista de Ejercicios */}
-          <View style={{ gap: Spacing.md }}>
-            {sessionDetails?.session_exercises?.map((se) => (
-              <View key={se.id} style={styles.exerciseExpandableCard}>
+        {/* Selector de Sesión */}
+        {!selectedSessionId ? (
+          <View>
+            <Text style={[Typography.h5, { marginBottom: Spacing.md }]}>
+              Selecciona tu sesión de hoy:
+            </Text>
+            {activeProgram.mesocycles?.[0]?.microcycles?.[0]?.workout_sessions?.map(
+              (session) => (
                 <TouchableOpacity
-                  style={styles.exerciseHeader}
-                  onPress={() => toggleExercise(se.id)}
-                  activeOpacity={0.7}
+                  key={session.id}
+                  style={styles.sessionSelectCard}
+                  onPress={() => setSelectedSessionId(session.id)}
                 >
-                  <View style={styles.exerciseIcon}>
-                    <Dumbbell size={20} color={Colors.primary} />
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.exerciseTitle}>{se.exercise?.name}</Text>
+                  <View>
+                    <Text style={styles.sessionSelectTitle}>
+                      {session.name}
+                    </Text>
                     <Text style={Typography.caption}>
-                      Objetivo: {se.target_sets} x {se.target_reps} @RPE{" "}
-                      {se.target_rpe}
+                      {(session.day_of_week &&
+                        DAY_OF_WEEK_LABELS[session.day_of_week]) ||
+                        "Día flexible"}{" "}
+                      • {session.session_exercises?.length || 0} ejercicios
                     </Text>
                   </View>
-                  {expandedExerciseId === se.id ? (
-                    <ChevronUp size={20} color={Colors.textMuted} />
-                  ) : (
-                    <ChevronDown size={20} color={Colors.textMuted} />
-                  )}
+                  <Play size={20} color={Colors.primary} />
                 </TouchableOpacity>
-
-                {expandedExerciseId === se.id && (
-                  <View style={styles.setsContainer}>
-                    <View style={styles.setsHeader}>
-                      <Text style={[styles.setHeaderText, { width: 40 }]}>
-                        SET
-                      </Text>
-                      <Text style={[styles.setHeaderText, { flex: 1 }]}>
-                        PESO (KG)
-                      </Text>
-                      <Text style={[styles.setHeaderText, { flex: 1 }]}>
-                        REPS
-                      </Text>
-                      <View style={{ width: 40 }} />
-                    </View>
-
-                    {exerciseSets[se.id]?.map((set, idx) => (
-                      <View key={idx} style={styles.setRow}>
-                        <Text style={styles.setNumber}>{set.set_number}</Text>
-                        <TextInput
-                          style={styles.setInput}
-                          placeholder="0"
-                          placeholderTextColor={Colors.textMuted}
-                          keyboardType="numeric"
-                          value={set.weight_kg}
-                          onChangeText={(v) =>
-                            updateSetData(se.id, idx, "weight_kg", v)
-                          }
-                        />
-                        <TextInput
-                          style={styles.setInput}
-                          placeholder="0"
-                          placeholderTextColor={Colors.textMuted}
-                          keyboardType="numeric"
-                          value={set.reps_performed}
-                          onChangeText={(v) =>
-                            updateSetData(se.id, idx, "reps_performed", v)
-                          }
-                        />
-                        <TouchableOpacity
-                          onPress={() =>
-                            updateSetData(
-                              se.id,
-                              idx,
-                              "completed",
-                              !set.completed,
-                            )
-                          }
-                          style={[
-                            styles.checkButton,
-                            set.completed && styles.checkButtonActive,
-                          ]}
-                        >
-                          <CheckCircle
-                            size={20}
-                            color={set.completed ? Colors.white : Colors.border}
-                          />
-                        </TouchableOpacity>
-                      </View>
-                    ))}
-                  </View>
-                )}
-              </View>
-            ))}
-          </View>
-
-          {/* Finish button */}
-          <TouchableOpacity
-            style={styles.finishButton}
-            activeOpacity={0.8}
-            onPress={handleFinishWorkout}
-            disabled={finishSessionMutation.isPending}
-          >
-            {finishSessionMutation.isPending ? (
-              <ActivityIndicator color={Colors.white} />
-            ) : (
-              <>
-                <Save size={20} color={Colors.white} />
-                <Text
-                  style={[
-                    Typography.buttonText,
-                    { color: Colors.white, marginLeft: Spacing.sm },
-                  ]}
-                >
-                  Registrar Entrenamiento
-                </Text>
-              </>
+              ),
             )}
-          </TouchableOpacity>
-        </>
-      )}
+          </View>
+        ) : loadingSession ? (
+          <ActivityIndicator color={Colors.primary} />
+        ) : (
+          <>
+            <View style={styles.sessionHeaderRow}>
+              <Text style={Typography.h4}>{sessionDetails?.name}</Text>
+              <TouchableOpacity onPress={() => setSelectedSessionId(null)}>
+                <Text style={{ color: Colors.primary, fontWeight: "600" }}>
+                  Cambiar
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Lista de Ejercicios */}
+            <View style={{ gap: Spacing.md }}>
+              {sessionDetails?.session_exercises?.map((se) => (
+                <View key={se.id} style={styles.exerciseExpandableCard}>
+                  <View style={styles.exerciseHeader}>
+                    <TouchableOpacity
+                      style={styles.exerciseHeaderMain}
+                      onPress={() => toggleExercise(se.id)}
+                      activeOpacity={0.7}
+                    >
+                      <View style={styles.exerciseIcon}>
+                        <Dumbbell size={20} color={Colors.primary} />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.exerciseTitle}>
+                          {se.exercise?.name}
+                        </Text>
+                        <Text style={Typography.caption}>
+                          Objetivo: {se.target_sets} x {se.target_reps} @RPE{" "}
+                          {se.target_rpe}
+                        </Text>
+                        {!!se.rest_time_seconds && (
+                          <View style={styles.restRow}>
+                            <Clock size={11} color={Colors.textMuted} />
+                            <Text style={styles.restText}>
+                              Descanso: {se.rest_time_seconds}s
+                            </Text>
+                          </View>
+                        )}
+                      </View>
+                      {expandedExerciseId === se.id ? (
+                        <ChevronUp size={20} color={Colors.textMuted} />
+                      ) : (
+                        <ChevronDown size={20} color={Colors.textMuted} />
+                      )}
+                    </TouchableOpacity>
+
+                    {!!se.exercise?.image_url && (
+                      <TouchableOpacity
+                        style={styles.eyeButton}
+                        onPress={() =>
+                          setPreviewImageUrl(se.exercise!.image_url)
+                        }
+                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                      >
+                        <Eye size={18} color={Colors.primary} />
+                      </TouchableOpacity>
+                    )}
+                  </View>
+
+                  {expandedExerciseId === se.id && (
+                    <View style={styles.setsContainer}>
+                      <View style={styles.setsHeader}>
+                        <Text style={[styles.setHeaderText, { width: 40 }]}>
+                          SET
+                        </Text>
+                        <Text style={[styles.setHeaderText, { flex: 1 }]}>
+                          PESO (KG)
+                        </Text>
+                        <Text style={[styles.setHeaderText, { flex: 1 }]}>
+                          REPS
+                        </Text>
+                        <View style={{ width: 40 }} />
+                      </View>
+
+                      {exerciseSets[se.id]?.map((set, idx) => (
+                        <View key={idx} style={styles.setRow}>
+                          <Text style={styles.setNumber}>{set.set_number}</Text>
+                          <TextInput
+                            style={styles.setInput}
+                            placeholder="0"
+                            placeholderTextColor={Colors.textMuted}
+                            keyboardType="numeric"
+                            value={set.weight_kg}
+                            onChangeText={(v) =>
+                              updateSetData(se.id, idx, "weight_kg", v)
+                            }
+                          />
+                          <TextInput
+                            style={styles.setInput}
+                            placeholder="0"
+                            placeholderTextColor={Colors.textMuted}
+                            keyboardType="numeric"
+                            value={set.reps_performed}
+                            onChangeText={(v) =>
+                              updateSetData(se.id, idx, "reps_performed", v)
+                            }
+                          />
+                          <TouchableOpacity
+                            onPress={() =>
+                              updateSetData(
+                                se.id,
+                                idx,
+                                "completed",
+                                !set.completed,
+                              )
+                            }
+                            style={[
+                              styles.checkButton,
+                              set.completed && styles.checkButtonActive,
+                            ]}
+                          >
+                            <CheckCircle
+                              size={20}
+                              color={
+                                set.completed ? Colors.white : Colors.border
+                              }
+                            />
+                          </TouchableOpacity>
+                        </View>
+                      ))}
+
+                      <Text style={styles.notesLabel}>
+                        Comentario sobre este ejercicio
+                      </Text>
+                      <TextInput
+                        style={styles.notesInput}
+                        placeholder="¿Cómo te sentiste, alguna molestia, ajuste para la próxima?"
+                        placeholderTextColor={Colors.textMuted}
+                        multiline
+                        value={exerciseNotes[se.id] || ""}
+                        onChangeText={(v) =>
+                          setExerciseNotes((prev) => ({ ...prev, [se.id]: v }))
+                        }
+                      />
+                    </View>
+                  )}
+                </View>
+              ))}
+            </View>
+
+            {/* Finish button */}
+            <TouchableOpacity
+              style={styles.finishButton}
+              activeOpacity={0.8}
+              onPress={handleFinishWorkout}
+              disabled={finishSessionMutation.isPending}
+            >
+              {finishSessionMutation.isPending ? (
+                <ActivityIndicator color={Colors.white} />
+              ) : (
+                <>
+                  <Save size={20} color={Colors.white} />
+                  <Text
+                    style={[
+                      Typography.buttonText,
+                      { color: Colors.white, marginLeft: Spacing.sm },
+                    ]}
+                  >
+                    Registrar Entrenamiento
+                  </Text>
+                </>
+              )}
+            </TouchableOpacity>
+          </>
+        )}
       </ScrollView>
+
+      <Modal
+        visible={!!previewImageUrl}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setPreviewImageUrl(null)}
+      >
+        <View style={styles.imagePreviewOverlay}>
+          <TouchableOpacity
+            style={styles.imagePreviewClose}
+            onPress={() => setPreviewImageUrl(null)}
+          >
+            <X size={24} color={Colors.white} />
+          </TouchableOpacity>
+          {previewImageUrl && (
+            <Image
+              source={{ uri: previewImageUrl }}
+              style={styles.imagePreview}
+              contentFit="contain"
+              cachePolicy="disk"
+              transition={150}
+            />
+          )}
+        </View>
+      </Modal>
     </KeyboardAvoidingView>
   );
 };
@@ -351,6 +435,23 @@ const styles = StyleSheet.create({
   content: {
     padding: Spacing.base,
     paddingBottom: 200,
+  },
+  imagePreviewOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.92)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  imagePreviewClose: {
+    position: "absolute",
+    top: Spacing.xl,
+    right: Spacing.lg,
+    zIndex: 1,
+    padding: Spacing.sm,
+  },
+  imagePreview: {
+    width: "100%",
+    height: "70%",
   },
   header: {
     marginBottom: Spacing.lg,
@@ -502,13 +603,32 @@ const styles = StyleSheet.create({
   exerciseHeader: {
     flexDirection: "row",
     alignItems: "center",
+    paddingRight: Spacing.md,
+  },
+  exerciseHeaderMain: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
     padding: Spacing.md,
     gap: Spacing.md,
+  },
+  eyeButton: {
+    padding: Spacing.sm,
   },
   exerciseTitle: {
     color: Colors.white,
     fontSize: 16,
     fontWeight: "700",
+  },
+  restRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    marginTop: 2,
+  },
+  restText: {
+    color: Colors.textMuted,
+    fontSize: 11,
   },
   setsContainer: {
     paddingHorizontal: Spacing.md,
@@ -563,6 +683,24 @@ const styles = StyleSheet.create({
   checkButtonActive: {
     backgroundColor: Colors.success,
     borderColor: Colors.success,
+  },
+  notesLabel: {
+    color: Colors.textMuted,
+    fontSize: 10,
+    fontWeight: "800",
+    marginTop: 8,
+    marginBottom: 6,
+  },
+  notesInput: {
+    backgroundColor: Colors.bg,
+    color: Colors.white,
+    borderRadius: BorderRadius.sm,
+    padding: Spacing.sm,
+    fontSize: 13,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    minHeight: 60,
+    textAlignVertical: "top",
   },
   finishButton: {
     backgroundColor: Colors.success,

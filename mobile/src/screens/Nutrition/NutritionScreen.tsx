@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import {
   View,
   Text,
@@ -14,43 +14,133 @@ import {
   Moon,
   CheckCircle,
   Circle,
+  Lock,
 } from "lucide-react-native";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNutritionStore } from "../../store/nutritionStore";
-import { nutritionService } from "../../services/nutritionService";
+import { useAuthStore } from "../../store/authStore";
+import {
+  nutritionService,
+  NutritionLog,
+} from "../../services/nutritionService";
+import { progressService } from "../../services/progressService";
+import { anamnesisService } from "../../services/anamnesisService";
 import { Colors, Spacing, BorderRadius, Typography } from "../../theme";
+
+const MACRO_COLORS = {
+  protein: "#3b82f6",
+  carbs: "#10b981",
+  fat: "#f59e0b",
+};
 
 const { width } = Dimensions.get("window");
 const halfCardWidth = (width - Spacing.base * 2 - Spacing.md) / 2;
 
+const DAY_LABELS = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
+
+function getImcLabel(imc: number): string {
+  if (imc < 18.5) return "Bajo Peso";
+  if (imc < 25) return "Peso Normal";
+  if (imc < 30) return "Sobrepeso";
+  return "Obesidad";
+}
+
+function buildWeeklyAdherence(logs: NutritionLog[]) {
+  const logsByDate = new Map(logs.map((l) => [l.recorded_at, l]));
+  const days = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    const key = d.toISOString().split("T")[0];
+    const log = logsByDate.get(key);
+    days.push({
+      dia: DAY_LABELS[d.getDay()],
+      sesion: log?.session_completed || false,
+      agua: (log?.water_liters || 0) >= 2,
+      sueno: (log?.sleep_hours || 0) >= 8,
+    });
+  }
+  return days;
+}
+
 export const NutritionScreen = () => {
-  const {
-    weight,
-    height,
-    age,
-    macros,
-    weeklyAdherence,
-    getIMC,
-    getTMB,
-    getTDEE,
-  } = useNutritionStore();
+  const { getIMC, getTMB, getTDEE, hydrate } = useNutritionStore();
+  const authUser = useAuthStore((state) => state.user);
 
   const queryClient = useQueryClient();
+
+  // El coach habilita esta sección por alumno; si no está habilitada, no se
+  // muestra nada del contenido más allá de este check.
+  const { data: nutritionSettings, isLoading: loadingSettings } = useQuery({
+    queryKey: ["nutrition-settings"],
+    queryFn: () => nutritionService.getNutritionSettings(),
+  });
 
   // Load today's log from backend
   const { data: todayLog, isLoading } = useQuery({
     queryKey: ["nutrition-today"],
     queryFn: () => nutritionService.getTodayLog(),
+    enabled: !!nutritionSettings?.nutrition_enabled,
   });
 
-  // Mutation to save/update today's log
+  const nutritionEnabled = !!nutritionSettings?.nutrition_enabled;
+
+  const { data: nutritionLogs = [] } = useQuery({
+    queryKey: ["nutrition-logs"],
+    queryFn: () => nutritionService.getNutritionLogs(),
+    enabled: nutritionEnabled,
+  });
+
+  const { data: latestAnthro } = useQuery({
+    queryKey: ["anthropometrics-latest"],
+    queryFn: () => progressService.getLatestAnthropometric(),
+    enabled: nutritionEnabled,
+  });
+
+  const { data: anamnesisData } = useQuery({
+    queryKey: ["anamnesis"],
+    queryFn: () => anamnesisService.getMyAnamnesis(),
+    enabled: nutritionEnabled,
+  });
+
+  useEffect(() => {
+    if (latestAnthro || anamnesisData?.profile || authUser?.gender) {
+      hydrate({
+        weight: latestAnthro?.weight,
+        height: latestAnthro?.height,
+        age: anamnesisData?.profile?.age,
+        activityLevel: anamnesisData?.profile?.activity_level,
+        gender: authUser?.gender,
+      });
+    }
+  }, [latestAnthro, anamnesisData, authUser, hydrate]);
+
+  const weeklyAdherence = buildWeeklyAdherence(nutritionLogs);
+
+  // Guarda hoy: actualiza la UI al toque (optimista) en vez de esperar el
+  // POST + el refetch para recién ahí pintar el check — eso es lo que hacía
+  // sentir lento el toggle de hábitos.
   const mutation = useMutation({
-    mutationFn: (data: any) =>
+    mutationFn: (data: Partial<NutritionLog>) =>
       nutritionService.saveLog({
         ...data,
         recorded_at: new Date().toISOString().split("T")[0],
       }),
-    onSuccess: () => {
+    onMutate: async (data) => {
+      await queryClient.cancelQueries({ queryKey: ["nutrition-today"] });
+      const previous = queryClient.getQueryData<NutritionLog | null>([
+        "nutrition-today",
+      ]);
+      queryClient.setQueryData(["nutrition-today"], (old: any) => ({
+        ...(old || {}),
+        ...data,
+      }));
+      return { previous };
+    },
+    onError: (_err, _data, context) => {
+      queryClient.setQueryData(["nutrition-today"], context?.previous);
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["nutrition-today"] });
     },
   });
@@ -95,6 +185,68 @@ export const NutritionScreen = () => {
   const tmb = getTMB();
   const tdee = getTDEE();
 
+  const macroBreakdown = nutritionSettings
+    ? [
+        {
+          name: "Proteínas",
+          value: nutritionSettings.macro_protein_pct,
+          color: MACRO_COLORS.protein,
+          grams: Math.round(
+            (tdee * (nutritionSettings.macro_protein_pct / 100)) / 4,
+          ),
+        },
+        {
+          name: "Carbohidratos",
+          value: nutritionSettings.macro_carbs_pct,
+          color: MACRO_COLORS.carbs,
+          grams: Math.round(
+            (tdee * (nutritionSettings.macro_carbs_pct / 100)) / 4,
+          ),
+        },
+        {
+          name: "Grasas",
+          value: nutritionSettings.macro_fat_pct,
+          color: MACRO_COLORS.fat,
+          grams: Math.round(
+            (tdee * (nutritionSettings.macro_fat_pct / 100)) / 9,
+          ),
+        },
+      ]
+    : [];
+
+  if (loadingSettings) {
+    return (
+      <View style={[styles.container, styles.center]}>
+        <Text style={{ color: Colors.textMuted }}>Cargando...</Text>
+      </View>
+    );
+  }
+
+  if (!nutritionEnabled) {
+    return (
+      <View style={[styles.container, styles.center, { padding: Spacing.xl }]}>
+        <Lock size={48} color={Colors.textMuted} />
+        <Text
+          style={[
+            Typography.h4,
+            { textAlign: "center", marginTop: Spacing.lg, color: Colors.white },
+          ]}
+        >
+          Nutrición aún no habilitada
+        </Text>
+        <Text
+          style={[
+            Typography.body,
+            { textAlign: "center", color: Colors.textMuted, marginTop: 8 },
+          ]}
+        >
+          Tu coach todavía no habilitó esta sección para vos. Contactalo si
+          creés que deberías tener acceso.
+        </Text>
+      </View>
+    );
+  }
+
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
       {/* Header */}
@@ -124,7 +276,7 @@ export const NutritionScreen = () => {
               { color: Colors.success, fontWeight: "600" },
             ]}
           >
-            Peso Normal
+            {getImcLabel(parseFloat(imc))}
           </Text>
         </View>
 
@@ -166,41 +318,32 @@ export const NutritionScreen = () => {
         <Text style={[Typography.h5, { marginBottom: Spacing.md }]}>
           Macronutrientes
         </Text>
-        {macros.map((macro, index) => {
-          const grams =
-            macro.name === "Proteínas"
-              ? Math.round((tdee * 0.3) / 4)
-              : macro.name === "Carbohidratos"
-                ? Math.round((tdee * 0.45) / 4)
-                : Math.round((tdee * 0.25) / 9);
-
-          return (
-            <View
-              key={index}
-              style={[
-                styles.macroRow,
-                index < macros.length - 1 && {
-                  borderBottomWidth: 1,
-                  borderBottomColor: Colors.border,
-                },
-              ]}
-            >
-              <View style={styles.macroLeft}>
-                <View
-                  style={[styles.macroDot, { backgroundColor: macro.color }]}
-                />
-                <Text style={[Typography.body, { fontSize: 14 }]}>
-                  {macro.name} ({macro.value}%)
-                </Text>
-              </View>
-              <Text
-                style={[Typography.body, { fontWeight: "700", fontSize: 14 }]}
-              >
-                {grams}g
+        {macroBreakdown.map((macro, index) => (
+          <View
+            key={macro.name}
+            style={[
+              styles.macroRow,
+              index < macroBreakdown.length - 1 && {
+                borderBottomWidth: 1,
+                borderBottomColor: Colors.border,
+              },
+            ]}
+          >
+            <View style={styles.macroLeft}>
+              <View
+                style={[styles.macroDot, { backgroundColor: macro.color }]}
+              />
+              <Text style={[Typography.body, { fontSize: 14 }]}>
+                {macro.name} ({macro.value}%)
               </Text>
             </View>
-          );
-        })}
+            <Text
+              style={[Typography.body, { fontWeight: "700", fontSize: 14 }]}
+            >
+              {macro.grams}g
+            </Text>
+          </View>
+        ))}
       </View>
 
       {/* Weekly Adherence */}
@@ -319,6 +462,10 @@ const styles = StyleSheet.create({
   },
   header: {
     marginBottom: Spacing.lg,
+  },
+  center: {
+    justifyContent: "center",
+    alignItems: "center",
   },
   reqRow: {
     flexDirection: "row",

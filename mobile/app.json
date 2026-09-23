@@ -25,6 +25,21 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-secure-store",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "FitCoach Pro necesita acceso a tus fotos para que puedas subir una imagen o GIF de un ejercicio."
+        }
+      ],
+      "expo-image"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "f20d91bd-957a-4ac3-ba75-fa390b8d793d"
+      }
     }
   }
 }

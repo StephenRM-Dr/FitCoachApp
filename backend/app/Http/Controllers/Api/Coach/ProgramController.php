@@ -3,10 +3,10 @@
 namespace App\Http\Controllers\Api\Coach;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\ProgramResource;
 use Illuminate\Http\Request;
 
 use App\Models\Program;
-use App\Models\CoachClient;
 
 class ProgramController extends Controller
 {
@@ -22,13 +22,8 @@ class ProgramController extends Controller
             'start_date' => 'nullable|date',
             'end_date' => 'nullable|date',
         ]);
-        
-        $assignment = CoachClient::where('coach_id', $request->user()->id)
-            ->where('client_id', $request->client_id)->first();
-            
-        if (!$assignment) {
-            return response()->json(['message' => 'Client not assigned to you'], 403);
-        }
+
+        $this->authorizeCoachOwnsClient($request, (int) $request->client_id);
 
         $program = Program::create([
             'coach_id' => $request->user()->id,
@@ -39,7 +34,7 @@ class ProgramController extends Controller
             'status' => 'active'
         ]);
 
-        return response()->json($program, 201);
+        return (new ProgramResource($program))->response()->setStatusCode(201);
     }
 
     /**
@@ -48,14 +43,12 @@ class ProgramController extends Controller
      */
     public function indexByClient(Request $request, $clientId)
     {
-        $assignment = CoachClient::where('coach_id', $request->user()->id)
-            ->where('client_id', $clientId)->first();
-            
-        if (!$assignment) {
-            return response()->json(['message' => 'Client not assigned to you'], 403);
-        }
-        
-        $programs = Program::where('client_id', $clientId)->with('mesocycles.microcycles.workoutSessions.sessionExercises.exercise')->get();
-        return response()->json($programs);
+        $this->authorizeCoachOwnsClient($request, (int) $clientId);
+
+        $programs = Program::where('client_id', $clientId)
+            ->with('mesocycles.microcycles.workoutSessions.sessionExercises.exercise')
+            ->get();
+
+        return ProgramResource::collection($programs);
     }
 }

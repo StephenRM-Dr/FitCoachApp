@@ -1,34 +1,14 @@
 import { create } from "zustand";
 
-interface Macro {
-  name: string;
-  value: number;
-  color: string;
-  grams?: number;
-}
-
-interface Habit {
-  id: string;
-  name: string;
-  completed: boolean;
-}
-
-interface AdherenceDay {
-  dia: string;
-  sesion: boolean;
-  agua: boolean;
-  sueno: boolean;
-}
+type Gender = "male" | "female";
+type ActivityLevel = "sedentario" | "ligero" | "activo" | "muy_activo";
 
 interface NutritionState {
   weight: number;
   height: number;
   age: number;
-  gender: "male" | "female";
+  gender: Gender;
   activityFactor: number;
-  macros: Macro[];
-  dailyHabits: Habit[];
-  weeklyAdherence: AdherenceDay[];
 
   // Computed values
   getIMC: () => string;
@@ -36,38 +16,30 @@ interface NutritionState {
   getTDEE: () => number;
 
   // Actions
-  updateWeight: (weight: number) => void;
-  toggleHabit: (id: string) => void;
-  updateAdherence: (day: string, type: "sesion" | "agua" | "sueno") => void;
+  hydrate: (data: {
+    weight?: number | null;
+    height?: number | null;
+    age?: number | null;
+    activityLevel?: ActivityLevel | null;
+    gender?: Gender | null;
+  }) => void;
+  setGender: (gender: Gender) => void;
 }
 
+// Multiplicadores de Harris-Benedict por nivel de actividad (mismo enum que UserProfile.activity_level).
+const ACTIVITY_FACTORS: Record<ActivityLevel, number> = {
+  sedentario: 1.2,
+  ligero: 1.375,
+  activo: 1.55,
+  muy_activo: 1.725,
+};
+
 export const useNutritionStore = create<NutritionState>((set, get) => ({
-  weight: 78.8,
-  height: 175,
-  age: 32,
+  weight: 70,
+  height: 170,
+  age: 30,
   gender: "male",
-  activityFactor: 1.55,
-  macros: [
-    { name: "Proteínas", value: 30, color: "#3b82f6" },
-    { name: "Carbohidratos", value: 45, color: "#10b981" },
-    { name: "Grasas", value: 25, color: "#f59e0b" },
-  ],
-  dailyHabits: [
-    { id: "1", name: "Desayuno completo con proteína", completed: true },
-    { id: "2", name: "2L de agua antes de las 14:00", completed: true },
-    { id: "3", name: "Snack pre-entrenamiento", completed: true },
-    { id: "4", name: "Sesión de entrenamiento", completed: false },
-    { id: "5", name: "Comida post-entrenamiento", completed: false },
-  ],
-  weeklyAdherence: [
-    { dia: "Lun", sesion: true, agua: true, sueno: true },
-    { dia: "Mar", sesion: true, agua: true, sueno: false },
-    { dia: "Mié", sesion: true, agua: false, sueno: true },
-    { dia: "Jue", sesion: false, agua: true, sueno: true },
-    { dia: "Vie", sesion: true, agua: true, sueno: true },
-    { dia: "Sáb", sesion: true, agua: true, sueno: true },
-    { dia: "Dom", sesion: false, agua: true, sueno: false },
-  ],
+  activityFactor: ACTIVITY_FACTORS.activo,
 
   getIMC: () => {
     const { weight, height } = get();
@@ -86,19 +58,16 @@ export const useNutritionStore = create<NutritionState>((set, get) => ({
     return Math.round(get().getTMB() * get().activityFactor);
   },
 
-  updateWeight: (weight) => set({ weight }),
-
-  toggleHabit: (id) =>
+  hydrate: (data) =>
     set((state) => ({
-      dailyHabits: state.dailyHabits.map((h) =>
-        h.id === id ? { ...h, completed: !h.completed } : h,
-      ),
+      weight: data.weight ?? state.weight,
+      height: data.height ?? state.height,
+      age: data.age ?? state.age,
+      activityFactor: data.activityLevel
+        ? ACTIVITY_FACTORS[data.activityLevel]
+        : state.activityFactor,
+      gender: data.gender ?? state.gender,
     })),
 
-  updateAdherence: (day, type) =>
-    set((state) => ({
-      weeklyAdherence: state.weeklyAdherence.map((d) =>
-        d.dia === day ? { ...d, [type]: !d[type] } : d,
-      ),
-    })),
+  setGender: (gender) => set({ gender }),
 }));

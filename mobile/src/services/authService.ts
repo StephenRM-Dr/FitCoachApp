@@ -11,6 +11,8 @@ interface RegisterData {
   password: string;
   password_confirmation: string;
   role?: "coach" | "client";
+  gender: "male" | "female";
+  coach_code?: string;
 }
 
 interface AuthResponse {
@@ -21,6 +23,7 @@ interface AuthResponse {
     name: string;
     email: string;
     role: "coach" | "client";
+    gender?: "male" | "female" | null;
     force_password_change?: boolean;
   };
 }
@@ -51,7 +54,19 @@ export const authService = {
     return response.data;
   },
 
+  confirmResetCode: async (
+    email: string,
+    code: string,
+  ): Promise<AuthResponse> => {
+    const response = await api.post("/password/reset/confirm", {
+      email,
+      code,
+    });
+    return response.data;
+  },
+
   updatePassword: async (data: {
+    current_password?: string;
     password: string;
     password_confirmation: string;
   }): Promise<{ message: string; user: AuthResponse["user"] }> => {

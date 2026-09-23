@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   Alert,
   Image,
+  Modal,
 } from "react-native";
 import {
   User,
@@ -19,6 +20,7 @@ import {
   HelpCircle,
 } from "lucide-react-native";
 import { useQuery } from "@tanstack/react-query";
+import { useNavigation } from "@react-navigation/native";
 import { useAuthStore } from "../../store/authStore";
 import { authService } from "../../services/authService";
 import { coachService } from "../../services/coachService";
@@ -26,6 +28,8 @@ import { Colors, Spacing, BorderRadius, Typography } from "../../theme";
 
 export function ProfileScreen() {
   const { user, logout } = useAuthStore();
+  const navigation = useNavigation<any>();
+  const [showCoachModal, setShowCoachModal] = useState(false);
 
   const { data: myCoach } = useQuery({
     queryKey: ["my-coach"],
@@ -123,12 +127,14 @@ export function ProfileScreen() {
           {renderMenuItem(
             <User size={20} color={Colors.primary} />,
             "Información Personal",
-            "Nombre, email, teléfono",
+            "Nombre, email, datos de perfil",
+            () => navigation.navigate("PersonalInfo"),
           )}
           {renderMenuItem(
             <Shield size={20} color={Colors.success} />,
             "Seguridad",
             "Contraseña, autenticación",
+            () => navigation.navigate("Security"),
           )}
         </View>
       </View>
@@ -139,7 +145,11 @@ export function ProfileScreen() {
           <Text style={[Typography.overline, { marginBottom: Spacing.md }]}>
             MI ENTRENADOR
           </Text>
-          <View style={styles.coachCard}>
+          <TouchableOpacity
+            style={styles.coachCard}
+            activeOpacity={0.7}
+            onPress={() => setShowCoachModal(true)}
+          >
             <View style={styles.coachAvatar}>
               <Text style={styles.coachAvatarText}>
                 {myCoach?.name?.charAt(0)?.toUpperCase() || "C"}
@@ -154,9 +164,49 @@ export function ProfileScreen() {
               </Text>
             </View>
             <ChevronRight size={18} color={Colors.textMuted} />
-          </View>
+          </TouchableOpacity>
         </View>
       )}
+
+      <Modal
+        visible={showCoachModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowCoachModal(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setShowCoachModal(false)}
+        >
+          <View style={styles.modalContent}>
+            <View
+              style={[
+                styles.coachAvatar,
+                { width: 64, height: 64, borderRadius: 32 },
+              ]}
+            >
+              <Text style={[styles.coachAvatarText, { fontSize: 26 }]}>
+                {myCoach?.name?.charAt(0)?.toUpperCase() || "C"}
+              </Text>
+            </View>
+            <Text style={[Typography.h4, { marginTop: Spacing.md }]}>
+              {myCoach ? myCoach.name : "Sin coach asignado"}
+            </Text>
+            <Text style={[Typography.bodySmall, { marginTop: Spacing.xs }]}>
+              {myCoach ? myCoach.email : "Espera a ser asignado por un coach"}
+            </Text>
+            <TouchableOpacity
+              style={styles.modalCloseButton}
+              onPress={() => setShowCoachModal(false)}
+            >
+              <Text style={{ color: Colors.white, fontWeight: "700" }}>
+                Cerrar
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
 
       {/* Preferences Section */}
       <View style={styles.section}>
@@ -168,16 +218,19 @@ export function ProfileScreen() {
             <Bell size={20} color={Colors.warning} />,
             "Notificaciones",
             "Recordatorios y alertas",
+            () => navigation.navigate("Notifications"),
           )}
           {renderMenuItem(
             <Moon size={20} color={Colors.purple} />,
             "Apariencia",
-            "Tema oscuro activado",
+            "Tema oscuro",
+            () => navigation.navigate("Appearance"),
           )}
           {renderMenuItem(
             <HelpCircle size={20} color={Colors.info} />,
             "Ayuda y Soporte",
             "FAQ, contacto",
+            () => navigation.navigate("HelpSupport"),
           )}
         </View>
       </View>
@@ -315,5 +368,26 @@ const styles = StyleSheet.create({
   coachInfo: {
     flex: 1,
     gap: 2,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.6)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: Spacing.xl,
+  },
+  modalContent: {
+    backgroundColor: Colors.bgCard,
+    borderRadius: BorderRadius.lg,
+    padding: Spacing.xl,
+    alignItems: "center",
+    width: "100%",
+  },
+  modalCloseButton: {
+    marginTop: Spacing.lg,
+    backgroundColor: Colors.primary,
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.xl,
+    borderRadius: BorderRadius.md,
   },
 });

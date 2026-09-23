@@ -9,28 +9,81 @@ import {
   Modal,
   ActivityIndicator,
   Alert,
+  Image,
 } from "react-native";
-import { Plus, Trash2, Save, Search, X } from "lucide-react-native";
+import * as ImagePicker from "expo-image-picker";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Plus, Trash2, Save, Search, X, ImagePlus } from "lucide-react-native";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { catalogService } from "../../services/catalogService";
 import { coachService } from "../../services/coachService";
 import { Colors, Spacing, BorderRadius, Typography } from "../../theme";
-import { Exercise } from "../../types";
+import {
+  Exercise,
+  DayOfWeek,
+  DAYS_OF_WEEK,
+  DAY_OF_WEEK_LABELS,
+} from "../../types";
 
 export function SessionBuilderScreen({ route, navigation }: any) {
-  const { microcycleId } = route.params;
+  const {
+    microcycleId,
+    dayOfWeek: presetDayOfWeek,
+    sessionId,
+  }: {
+    microcycleId?: number;
+    dayOfWeek?: DayOfWeek;
+    sessionId?: number;
+  } = route.params;
+  const isEditMode = !!sessionId;
   const queryClient = useQueryClient();
+  const insets = useSafeAreaInsets();
 
   const [sessionName, setSessionName] = useState("Nueva Sesión");
-  const [dayOfWeek, setDayOfWeek] = useState("");
+  const [dayOfWeek, setDayOfWeek] = useState<DayOfWeek | null>(
+    presetDayOfWeek ?? null,
+  );
   const [selectedExercises, setSelectedExercises] = useState<any[]>([]);
   const [isExerciseModalVisible, setIsExerciseModalVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [uploadingExerciseId, setUploadingExerciseId] = useState<number | null>(
+    null,
+  );
 
   const { data: exercises = [], isLoading: loadingExercises } = useQuery({
     queryKey: ["exercises"],
     queryFn: () => catalogService.getExercises(),
   });
+
+  // Modo edición: precarga la sesión ya guardada para poder añadir/quitar
+  // ejercicios. La forma local (selectedExercises) reutiliza el mismo shape
+  // que produce addExercise, así el resto del componente no distingue entre
+  // crear y editar.
+  const { data: existingSession, isLoading: loadingSession } = useQuery({
+    queryKey: ["session-preview", sessionId],
+    queryFn: () => coachService.getSessionPreview(sessionId as number),
+    enabled: isEditMode,
+  });
+
+  // Precarga los campos del formulario apenas llega la sesión existente,
+  // ajustando el estado durante el render (evita el useEffect extra) —
+  // solo se dispara una vez, cuando loadedSessionId todavía no coincide.
+  const [loadedSessionId, setLoadedSessionId] = useState<number | null>(null);
+  if (existingSession && loadedSessionId !== existingSession.id) {
+    setLoadedSessionId(existingSession.id);
+    setSessionName(existingSession.name);
+    setDayOfWeek(existingSession.day_of_week ?? null);
+    setSelectedExercises(
+      (existingSession.session_exercises ?? []).map((se) => ({
+        ...se.exercise,
+        exercise_id: se.exercise_id,
+        target_sets: se.target_sets ?? 0,
+        target_reps: se.target_reps ?? 0,
+        target_rpe: se.target_rpe ?? 0,
+        rest_time_seconds: se.rest_time_seconds ?? 0,
+      })),
+    );
+  }
 
   const createSessionMutation = useMutation({
     mutationFn: (data: any) => coachService.createSession(microcycleId, data),
@@ -40,10 +93,97 @@ export function SessionBuilderScreen({ route, navigation }: any) {
       navigation.goBack();
     },
     onError: (error: any) => {
-      console.error("Create Session Error:", error.response?.data || error.message);
-      Alert.alert("Error", "No se pudo crear la sesión. Revisa los datos e intenta de nuevo.");
+      console.error(
+        "Create Session Error:",
+        error.response?.data || error.message,
+      );
+      Alert.alert(
+        "Error",
+        "No se pudo crear la sesión. Revisa los datos e intenta de nuevo.",
+      );
     },
   });
+
+  const updateSessionMutation = useMutation({
+    mutationFn: (data: any) =>
+      coachService.updateSession(sessionId as number, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["client-programs"] });
+      queryClient.invalidateQueries({
+        queryKey: ["session-preview", sessionId],
+      });
+      queryClient.invalidateQueries({ queryKey: ["weekly-plan"] });
+      queryClient.invalidateQueries({ queryKey: ["microcycle-week"] });
+      Alert.alert("Éxito", "Sesión actualizada correctamente");
+      navigation.goBack();
+    },
+    onError: (error: any) => {
+      console.error(
+        "Update Session Error:",
+        error.response?.data || error.message,
+      );
+      Alert.alert(
+        "Error",
+        "No se pudo actualizar la sesión. Revisa los datos e intenta de nuevo.",
+      );
+    },
+  });
+
+  const saveMutation = isEditMode
+    ? updateSessionMutation
+    : createSessionMutation;
+
+  const uploadMediaMutation = useMutation({
+    mutationFn: ({
+      exerciseId,
+      asset,
+    }: {
+      exerciseId: number;
+      asset: { uri: string; name: string; type: string };
+    }) => coachService.uploadExerciseMedia(exerciseId, asset),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["exercises"] });
+    },
+    onError: () => {
+      Alert.alert("Error", "No se pudo subir la imagen. Intenta de nuevo.");
+    },
+    onSettled: () => setUploadingExerciseId(null),
+  });
+
+  const pickAndUploadMedia = async (exerciseId: number) => {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      Alert.alert(
+        "Permiso necesario",
+        "Necesitamos acceso a tus fotos para subir la imagen del ejercicio.",
+      );
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ["images"],
+      quality: 1,
+      allowsEditing: false,
+    });
+
+    if (result.canceled || !result.assets?.[0]) {
+      return;
+    }
+
+    const picked = result.assets[0];
+    const mimeType = picked.mimeType || "image/jpeg";
+    const extension = mimeType.split("/")[1] || "jpg";
+
+    setUploadingExerciseId(exerciseId);
+    uploadMediaMutation.mutate({
+      exerciseId,
+      asset: {
+        uri: picked.uri,
+        name: picked.fileName || `ejercicio-${exerciseId}.${extension}`,
+        type: mimeType,
+      },
+    });
+  };
 
   const filteredExercises = exercises.filter(
     (ex) =>
@@ -81,7 +221,7 @@ export function SessionBuilderScreen({ route, navigation }: any) {
       Alert.alert("Error", "Añade al menos un ejercicio");
       return;
     }
-    createSessionMutation.mutate({
+    saveMutation.mutate({
       name: sessionName,
       day_of_week: dayOfWeek,
       exercises: selectedExercises.map((ex) => ({
@@ -94,9 +234,22 @@ export function SessionBuilderScreen({ route, navigation }: any) {
     });
   };
 
+  if (isEditMode && loadingSession) {
+    return (
+      <View style={[styles.container, styles.loaderContainer]}>
+        <ActivityIndicator size="large" color={Colors.primary} />
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView
+        contentContainerStyle={[
+          styles.content,
+          { paddingBottom: 100 + insets.bottom },
+        ]}
+      >
         <View style={styles.section}>
           <Text style={Typography.label}>Nombre de la Sesión</Text>
           <TextInput
@@ -109,14 +262,30 @@ export function SessionBuilderScreen({ route, navigation }: any) {
         </View>
 
         <View style={styles.section}>
-          <Text style={Typography.label}>Día (Opcional)</Text>
-          <TextInput
-            style={styles.input}
-            value={dayOfWeek}
-            onChangeText={setDayOfWeek}
-            placeholder="Ej. Lunes"
-            placeholderTextColor={Colors.textMuted}
-          />
+          <Text style={Typography.label}>Día de la semana (Opcional)</Text>
+          <View style={styles.dayChipsRow}>
+            {DAYS_OF_WEEK.map((day) => (
+              <TouchableOpacity
+                key={day}
+                style={[
+                  styles.dayChip,
+                  dayOfWeek === day && styles.dayChipActive,
+                ]}
+                onPress={() =>
+                  setDayOfWeek((current) => (current === day ? null : day))
+                }
+              >
+                <Text
+                  style={[
+                    styles.dayChipText,
+                    dayOfWeek === day && styles.dayChipTextActive,
+                  ]}
+                >
+                  {DAY_OF_WEEK_LABELS[day].slice(0, 3)}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
         </View>
 
         <View style={styles.headerRow}>
@@ -175,6 +344,17 @@ export function SessionBuilderScreen({ route, navigation }: any) {
                   }
                 />
               </View>
+              <View style={styles.paramGroup}>
+                <Text style={styles.paramLabel}>Descanso (s)</Text>
+                <TextInput
+                  style={styles.paramInput}
+                  keyboardType="numeric"
+                  value={String(ex.rest_time_seconds)}
+                  onChangeText={(v) =>
+                    updateExerciseData(index, "rest_time_seconds", v)
+                  }
+                />
+              </View>
             </View>
           </View>
         ))}
@@ -189,16 +369,18 @@ export function SessionBuilderScreen({ route, navigation }: any) {
       </ScrollView>
 
       <TouchableOpacity
-        style={styles.saveButton}
+        style={[styles.saveButton, { bottom: Spacing.lg + insets.bottom }]}
         onPress={handleSave}
-        disabled={createSessionMutation.isPending}
+        disabled={saveMutation.isPending}
       >
-        {createSessionMutation.isPending ? (
+        {saveMutation.isPending ? (
           <ActivityIndicator color={Colors.white} />
         ) : (
           <>
             <Save size={20} color={Colors.white} />
-            <Text style={styles.saveButtonText}>Guardar Sesión Completa</Text>
+            <Text style={styles.saveButtonText}>
+              {isEditMode ? "Guardar Cambios" : "Guardar Sesión Completa"}
+            </Text>
           </>
         )}
       </TouchableOpacity>
@@ -251,18 +433,42 @@ export function SessionBuilderScreen({ route, navigation }: any) {
                 showsVerticalScrollIndicator={false}
               >
                 {filteredExercises.map((ex) => (
-                  <TouchableOpacity
-                    key={ex.id}
-                    style={styles.exerciseItem}
-                    onPress={() => addExercise(ex)}
-                    activeOpacity={0.7}
-                  >
-                    <View style={styles.exerciseMainInfo}>
+                  <View key={ex.id} style={styles.exerciseItem}>
+                    {ex.image_url ? (
+                      <Image
+                        source={{ uri: ex.image_url }}
+                        style={styles.exerciseThumbnail}
+                      />
+                    ) : (
+                      <TouchableOpacity
+                        style={styles.exerciseThumbnailPlaceholder}
+                        onPress={() => pickAndUploadMedia(ex.id)}
+                        disabled={uploadingExerciseId === ex.id}
+                      >
+                        {uploadingExerciseId === ex.id ? (
+                          <ActivityIndicator
+                            size="small"
+                            color={Colors.primary}
+                          />
+                        ) : (
+                          <ImagePlus size={18} color={Colors.textMuted} />
+                        )}
+                      </TouchableOpacity>
+                    )}
+
+                    <TouchableOpacity
+                      style={styles.exerciseMainInfo}
+                      onPress={() => addExercise(ex)}
+                      activeOpacity={0.7}
+                    >
                       <Text style={styles.exerciseNameText}>{ex.name}</Text>
                       <View
                         style={[
                           styles.muscleBadge,
-                          { backgroundColor: getMuscleColor(ex.muscle_group) + "20" },
+                          {
+                            backgroundColor:
+                              getMuscleColor(ex.muscle_group) + "20",
+                          },
                         ]}
                       >
                         <Text
@@ -274,17 +480,39 @@ export function SessionBuilderScreen({ route, navigation }: any) {
                           {ex.muscle_group}
                         </Text>
                       </View>
-                    </View>
-                    <View style={styles.addIconContainer}>
+                    </TouchableOpacity>
+
+                    {ex.image_url && (
+                      <TouchableOpacity
+                        onPress={() => pickAndUploadMedia(ex.id)}
+                        disabled={uploadingExerciseId === ex.id}
+                        style={{ marginRight: Spacing.sm }}
+                      >
+                        {uploadingExerciseId === ex.id ? (
+                          <ActivityIndicator
+                            size="small"
+                            color={Colors.primary}
+                          />
+                        ) : (
+                          <ImagePlus size={16} color={Colors.textMuted} />
+                        )}
+                      </TouchableOpacity>
+                    )}
+
+                    <TouchableOpacity
+                      style={styles.addIconContainer}
+                      onPress={() => addExercise(ex)}
+                    >
                       <Plus size={20} color={Colors.primary} />
-                    </View>
-                  </TouchableOpacity>
+                    </TouchableOpacity>
+                  </View>
                 ))}
 
                 {filteredExercises.length === 0 && (
                   <View style={styles.modalEmptyState}>
                     <Text style={{ color: Colors.textMuted }}>
-                      No se encontraron resultados para "{searchQuery}"
+                      No se encontraron resultados para &quot;{searchQuery}
+                      &quot;
                     </Text>
                   </View>
                 )}
@@ -328,6 +556,32 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   addButtonText: { color: Colors.white, fontWeight: "700" },
+  dayChipsRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: Spacing.sm,
+    marginTop: Spacing.xs,
+  },
+  dayChip: {
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    borderRadius: BorderRadius.full,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    backgroundColor: Colors.bgCard,
+  },
+  dayChipActive: {
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
+  },
+  dayChipText: {
+    color: Colors.textSecondary,
+    fontWeight: "700",
+    fontSize: 13,
+  },
+  dayChipTextActive: {
+    color: Colors.white,
+  },
   exerciseCard: {
     backgroundColor: Colors.bgCard,
     borderRadius: BorderRadius.lg,
@@ -429,6 +683,25 @@ const styles = StyleSheet.create({
   exerciseMainInfo: {
     flex: 1,
     gap: 4,
+  },
+  exerciseThumbnail: {
+    width: 40,
+    height: 40,
+    borderRadius: BorderRadius.sm,
+    marginRight: Spacing.sm,
+    backgroundColor: Colors.bg,
+  },
+  exerciseThumbnailPlaceholder: {
+    width: 40,
+    height: 40,
+    borderRadius: BorderRadius.sm,
+    marginRight: Spacing.sm,
+    backgroundColor: Colors.bg,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    borderStyle: "dashed",
+    justifyContent: "center",
+    alignItems: "center",
   },
   exerciseNameText: {
     fontSize: 16,

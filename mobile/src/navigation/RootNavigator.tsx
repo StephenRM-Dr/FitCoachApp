@@ -2,6 +2,7 @@ import React from "react";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { ActivityIndicator, View, StyleSheet } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuthStore } from "../store/authStore";
 import {
   Home,
@@ -30,33 +31,54 @@ import { ProfileScreen } from "../screens/Profile/ProfileScreen";
 import { PlanningScreen } from "../screens/Planning/PlanningScreen";
 import { DiagnosisScreen } from "../screens/Diagnosis/DiagnosisScreen";
 import { SessionBuilderScreen } from "../screens/Planning/SessionBuilderScreen";
+import { CoachSessionPickerScreen } from "../screens/Workout/CoachSessionPickerScreen";
+import { SessionPreviewScreen } from "../screens/Workout/SessionPreviewScreen";
+
+// Profile Screens (shared by both roles)
+import { PersonalInfoScreen } from "../screens/Profile/PersonalInfoScreen";
+import { SecurityScreen } from "../screens/Profile/SecurityScreen";
+import { NotificationsScreen } from "../screens/Profile/NotificationsScreen";
+import { AppearanceScreen } from "../screens/Profile/AppearanceScreen";
+import { HelpSupportScreen } from "../screens/Profile/HelpSupportScreen";
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
 
-const tabBarStyle = {
-  backgroundColor: Colors.bg,
-  borderTopColor: Colors.border,
-  borderTopWidth: 1,
-  paddingTop: 8,
-  minHeight: 60,
-};
+/**
+ * Opciones de tabs, calculadas con los insets reales del dispositivo para
+ * que el tab bar no quede tapado por la barra de gestos/botones de Android
+ * (edge-to-edge es obligatorio desde Expo SDK 54, no se puede confiar en
+ * que @react-navigation/bottom-tabs lo resuelva solo en todos los builds).
+ */
+function useTabScreenOptions() {
+  const insets = useSafeAreaInsets();
+  const bottomInset = Math.max(insets.bottom, 8);
 
-const screenOptions = {
-  headerStyle: { backgroundColor: Colors.bg },
-  headerTitleStyle: { fontWeight: "700" as const, color: Colors.textPrimary },
-  headerTintColor: Colors.textPrimary,
-  tabBarActiveTintColor: Colors.primary,
-  tabBarInactiveTintColor: Colors.textMuted,
-  tabBarStyle,
-  tabBarLabelStyle: { fontSize: 11, fontWeight: "600" as const },
-};
+  return {
+    headerStyle: { backgroundColor: Colors.bg },
+    headerTitleStyle: { fontWeight: "700" as const, color: Colors.textPrimary },
+    headerTintColor: Colors.textPrimary,
+    tabBarActiveTintColor: Colors.primary,
+    tabBarInactiveTintColor: Colors.textMuted,
+    tabBarStyle: {
+      backgroundColor: Colors.bg,
+      borderTopColor: Colors.border,
+      borderTopWidth: 1,
+      paddingTop: 8,
+      paddingBottom: bottomInset,
+      height: 52 + bottomInset,
+    },
+    tabBarLabelStyle: { fontSize: 11, fontWeight: "600" as const },
+  };
+}
 
 /**
  * Tabs for Asesorado (Client) role.
  * 5 tabs: Home, Entrenar, Progreso, Nutrición, Perfil
  */
 function ClientTabs() {
+  const screenOptions = useTabScreenOptions();
+
   return (
     <Tab.Navigator screenOptions={screenOptions}>
       <Tab.Screen
@@ -114,6 +136,8 @@ function ClientTabs() {
  * 5 tabs: Resumen, Planificación, Diagnóstico, Entrenar, Perfil
  */
 function CoachTabs() {
+  const screenOptions = useTabScreenOptions();
+
   return (
     <Tab.Navigator screenOptions={screenOptions}>
       <Tab.Screen
@@ -144,7 +168,7 @@ function CoachTabs() {
       />
       <Tab.Screen
         name="Workout"
-        component={WorkoutScreen}
+        component={CoachSessionPickerScreen}
         options={{
           tabBarIcon: ({ color, size }) => (
             <Dumbbell color={color} size={size} />
@@ -199,17 +223,54 @@ export const RootNavigator = () => {
           name="ForcePasswordChange"
           component={ForcePasswordChangeScreen}
         />
-      ) : user?.role === "coach" ? (
+      ) : (
         <>
-          <Stack.Screen name="Main" component={CoachTabs} />
+          {user?.role === "coach" ? (
+            <>
+              <Stack.Screen name="Main" component={CoachTabs} />
+              <Stack.Screen
+                name="SessionBuilder"
+                component={SessionBuilderScreen}
+                options={{ headerShown: true, title: "Constructor de Sesión" }}
+              />
+              <Stack.Screen
+                name="SessionPreview"
+                component={SessionPreviewScreen}
+                options={{
+                  headerShown: true,
+                  title: "Vista Previa de Sesión",
+                }}
+              />
+            </>
+          ) : (
+            <Stack.Screen name="Main" component={ClientTabs} />
+          )}
           <Stack.Screen
-            name="SessionBuilder"
-            component={SessionBuilderScreen}
-            options={{ headerShown: true, title: "Constructor de Sesión" }}
+            name="PersonalInfo"
+            component={PersonalInfoScreen}
+            options={{ headerShown: true, title: "Información Personal" }}
+          />
+          <Stack.Screen
+            name="Security"
+            component={SecurityScreen}
+            options={{ headerShown: true, title: "Seguridad" }}
+          />
+          <Stack.Screen
+            name="Notifications"
+            component={NotificationsScreen}
+            options={{ headerShown: true, title: "Notificaciones" }}
+          />
+          <Stack.Screen
+            name="Appearance"
+            component={AppearanceScreen}
+            options={{ headerShown: true, title: "Apariencia" }}
+          />
+          <Stack.Screen
+            name="HelpSupport"
+            component={HelpSupportScreen}
+            options={{ headerShown: true, title: "Ayuda y Soporte" }}
           />
         </>
-      ) : (
-        <Stack.Screen name="Main" component={ClientTabs} />
       )}
     </Stack.Navigator>
   );

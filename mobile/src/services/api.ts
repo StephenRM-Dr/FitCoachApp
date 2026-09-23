@@ -29,11 +29,24 @@ api.interceptors.request.use(
   },
 );
 
-// Interceptor para debugging (opcional)
+// Interceptor de respuesta: logging solo en desarrollo y cierre de sesión
+// automático si el token fue revocado o expiró (401).
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    console.error("API Error:", error.response?.data || error.message);
+    if (__DEV__) {
+      console.error("API Error:", error.response?.data || error.message);
+    }
+
+    const { isAuthenticated, logout } = useAuthStore.getState();
+    const isAuthRoute = ["/login", "/register", "/password/reset"].some(
+      (path) => error.config?.url?.includes(path),
+    );
+
+    if (error.response?.status === 401 && isAuthenticated && !isAuthRoute) {
+      logout();
+    }
+
     return Promise.reject(error);
   },
 );

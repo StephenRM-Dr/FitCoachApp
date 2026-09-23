@@ -30,6 +30,8 @@ export const RegisterScreen = ({ navigation }: any) => {
   const [password, setPassword] = useState("");
   const [passwordConfirmation, setPasswordConfirmation] = useState("");
   const [role, setRole] = useState<"coach" | "client">("client");
+  const [gender, setGender] = useState<"male" | "female" | "">("");
+  const [coachCode, setCoachCode] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const { setAuth, setError, error, clearError } = useAuthStore();
@@ -58,6 +60,14 @@ export const RegisterScreen = ({ navigation }: any) => {
       setError("La contraseña debe tener al menos 8 caracteres.");
       return;
     }
+    if (role === "coach" && !coachCode.trim()) {
+      setError("Ingresa tu código de invitación de coach.");
+      return;
+    }
+    if (!gender) {
+      setError("Selecciona tu género.");
+      return;
+    }
 
     setLoading(true);
     try {
@@ -67,6 +77,8 @@ export const RegisterScreen = ({ navigation }: any) => {
         password,
         password_confirmation: passwordConfirmation,
         role,
+        gender: gender as "male" | "female",
+        ...(role === "coach" ? { coach_code: coachCode.trim() } : {}),
       });
       setAuth(
         { ...data.user, role: data.user.role || role },
@@ -74,8 +86,9 @@ export const RegisterScreen = ({ navigation }: any) => {
       );
     } catch (err: any) {
       const message =
-        err.response?.data?.message ||
+        err.response?.data?.errors?.coach_code?.[0] ||
         err.response?.data?.errors?.email?.[0] ||
+        err.response?.data?.message ||
         "Error al registrar. Intenta de nuevo.";
       setError(message);
     } finally {
@@ -204,6 +217,17 @@ export const RegisterScreen = ({ navigation }: any) => {
               </Text>
             </TouchableOpacity>
           </View>
+          {role === "coach" &&
+            renderInput(
+              <ShieldCheck size={20} color={Colors.textMuted} />,
+              "Código de invitación de Coach",
+              coachCode,
+              setCoachCode,
+              {
+                placeholder: "Código proporcionado por FitCoach",
+                autoCapitalize: "none",
+              },
+            )}
         </View>
 
         {/* Form */}
@@ -227,6 +251,46 @@ export const RegisterScreen = ({ navigation }: any) => {
               autoCapitalize: "none",
             },
           )}
+
+          <View style={styles.fieldGroup}>
+            <Text style={Typography.label}>Género</Text>
+            <View style={styles.roleRow}>
+              <TouchableOpacity
+                style={[
+                  styles.roleButton,
+                  gender === "female" && styles.roleButtonActive,
+                ]}
+                onPress={() => setGender("female")}
+                activeOpacity={0.7}
+              >
+                <Text
+                  style={[
+                    styles.roleText,
+                    gender === "female" && styles.roleTextActive,
+                  ]}
+                >
+                  Femenino
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.roleButton,
+                  gender === "male" && styles.roleButtonActive,
+                ]}
+                onPress={() => setGender("male")}
+                activeOpacity={0.7}
+              >
+                <Text
+                  style={[
+                    styles.roleText,
+                    gender === "male" && styles.roleTextActive,
+                  ]}
+                >
+                  Masculino
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
 
           {renderInput(
             <Lock size={20} color={Colors.textMuted} />,

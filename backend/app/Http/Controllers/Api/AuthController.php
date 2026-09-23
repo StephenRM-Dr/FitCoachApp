@@ -3,11 +3,13 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Resources\UserResource;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
-use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Mail;
 use App\Mail\PasswordResetMail;
 
@@ -23,13 +25,28 @@ class AuthController extends Controller
             'email' => 'required|string|email|max:255|unique:users',
             'password' => 'required|string|min:8|confirmed',
             'role' => 'sometimes|in:coach,client',
+            'coach_code' => 'required_if:role,coach|nullable|string',
+            'gender' => 'required|in:male,female',
         ]);
+
+        $role = $request->input('role', 'client');
+
+        if ($role === 'coach') {
+            $expectedCode = config('fitcoach.coach_registration_code');
+
+            if (! $expectedCode || ! hash_equals($expectedCode, (string) $request->input('coach_code'))) {
+                throw ValidationException::withMessages([
+                    'coach_code' => ['El código de coach no es válido.'],
+                ]);
+            }
+        }
 
         $user = User::create([
             'name' => $request->name,
             'email' => $request->email,
             'password' => $request->password,
-            'role' => $request->input('role', 'client'),
+            'role' => $role,
+            'gender' => $request->gender,
         ]);
 
         $token = $user->createToken('auth_token')->plainTextToken;
@@ -37,7 +54,7 @@ class AuthController extends Controller
         return response()->json([
             'access_token' => $token,
             'token_type' => 'Bearer',
-            'user' => $user,
+            'user' => new UserResource($user),
         ], 201);
     }
 
@@ -64,7 +81,7 @@ class AuthController extends Controller
         return response()->json([
             'access_token' => $token,
             'token_type' => 'Bearer',
-            'user' => $user,
+            'user' => new UserResource($user),
         ]);
     }
 
@@ -81,25 +98,75 @@ class AuthController extends Controller
     }
 
     /**
-     * Recuperación de contraseña (envía nueva por correo).
+     * Solicita un código de verificación de un solo uso para recuperar la
+     * cuenta. No modifica la contraseña actual: pedir el reset no debe
+     * poder bloquear a un usuario que no complete el segundo paso.
      */
     public function resetPassword(Request $request)
     {
         $request->validate([
-            'email' => 'required|email|exists:users,email',
+            'email' => 'required|email',
         ]);
 
         $user = User::where('email', $request->email)->first();
-        $newPassword = Str::random(8);
 
-        $user->password = $newPassword;
+        // Respuesta idéntica exista o no la cuenta, para no permitir
+        // enumerar qué correos están registrados.
+        if ($user) {
+            $code = (string) random_int(100000, 999999);
+
+            DB::table('password_reset_tokens')->updateOrInsert(
+                ['email' => $user->email],
+                ['token' => Hash::make($code), 'created_at' => now()]
+            );
+
+            Mail::to($user->email)->send(new PasswordResetMail($code));
+        }
+
+        return response()->json([
+            'message' => 'Si el correo está registrado, recibirás un código de verificación en tu bandeja de entrada.'
+        ]);
+    }
+
+    /**
+     * Confirma el código de verificación y autentica al usuario para que
+     * pueda establecer una nueva contraseña (force_password_change). El
+     * código es de un solo uso y expira a los 15 minutos; su hash es lo
+     * único que se persiste.
+     */
+    public function confirmResetCode(Request $request)
+    {
+        $request->validate([
+            'email' => 'required|email',
+            'code' => 'required|string',
+        ]);
+
+        $record = DB::table('password_reset_tokens')
+            ->where('email', $request->email)
+            ->first();
+
+        $invalid = ! $record
+            || Carbon::parse($record->created_at)->addMinutes(15)->isPast()
+            || ! Hash::check($request->code, $record->token);
+
+        if ($invalid) {
+            throw ValidationException::withMessages([
+                'code' => ['El código no es válido o ha expirado.'],
+            ]);
+        }
+
+        $user = User::where('email', $request->email)->firstOrFail();
         $user->force_password_change = true;
         $user->save();
 
-        Mail::to($user->email)->send(new PasswordResetMail($newPassword));
+        DB::table('password_reset_tokens')->where('email', $request->email)->delete();
+
+        $token = $user->createToken('auth_token')->plainTextToken;
 
         return response()->json([
-            'message' => 'Se ha enviado una nueva contraseña a tu correo electrónico.'
+            'access_token' => $token,
+            'token_type' => 'Bearer',
+            'user' => new UserResource($user),
         ]);
     }
 
@@ -108,18 +175,38 @@ class AuthController extends Controller
      */
     public function updatePassword(Request $request)
     {
-        $request->validate([
-            'password' => 'required|string|min:8|confirmed',
-        ]);
-
         $user = $request->user();
+
+        // El primer cambio tras un reseteo (force_password_change) no exige
+        // la contraseña actual: el usuario acaba de autenticarse con la
+        // temporal. Fuera de ese flujo, sí se exige para evitar que un
+        // token robado baste para tomar la cuenta permanentemente.
+        $rules = ['password' => 'required|string|min:8|confirmed'];
+        if (! $user->force_password_change) {
+            $rules['current_password'] = 'required|string';
+        }
+
+        $request->validate($rules);
+
+        if (! $user->force_password_change && ! Hash::check($request->current_password, $user->password)) {
+            throw ValidationException::withMessages([
+                'current_password' => ['La contraseña actual no es correcta.'],
+            ]);
+        }
+
         $user->password = $request->password;
         $user->force_password_change = false;
         $user->save();
 
+        // Revoca cualquier otra sesión activa: tras un cambio de contraseña
+        // solo debe sobrevivir el token actual.
+        $user->tokens()
+            ->where('id', '!=', $user->currentAccessToken()->id)
+            ->delete();
+
         return response()->json([
             'message' => 'Contraseña actualizada correctamente.',
-            'user' => $user
+            'user' => new UserResource($user),
         ]);
     }
 }

@@ -4,7 +4,30 @@ export interface Exercise {
   muscle_group: string;
   description: string | null;
   video_url: string | null;
+  image_url: string | null;
 }
+
+export const DAYS_OF_WEEK = [
+  "lunes",
+  "martes",
+  "miercoles",
+  "jueves",
+  "viernes",
+  "sabado",
+  "domingo",
+] as const;
+
+export type DayOfWeek = (typeof DAYS_OF_WEEK)[number];
+
+export const DAY_OF_WEEK_LABELS: Record<DayOfWeek, string> = {
+  lunes: "Lunes",
+  martes: "Martes",
+  miercoles: "Miércoles",
+  jueves: "Jueves",
+  viernes: "Viernes",
+  sabado: "Sábado",
+  domingo: "Domingo",
+};
 
 export interface SessionExercise {
   id: number;
@@ -22,7 +45,7 @@ export interface WorkoutSession {
   id: number;
   microcycle_id: number;
   name: string;
-  day_of_week: string | null;
+  day_of_week: DayOfWeek | null;
   session_exercises?: SessionExercise[];
 }
 
@@ -63,6 +86,7 @@ export interface ExecutionSet {
   reps_performed: number | null;
   rpe: number | null;
   rir: number | null;
+  notes?: string | null;
 }
 
 export interface WorkoutExecution {
@@ -73,5 +97,12 @@ export interface WorkoutExecution {
   completed_at: string | null;
   session_rpe: number | null;
   notes: string | null;
-  sets?: ExecutionSet[];
+  workout_session?: WorkoutSession;
+  execution_sets?: ExecutionSet[];
+}
+
+export interface WeeklyPlan {
+  program_id: number;
+  mesocycle_id: number;
+  microcycle: Microcycle;
 }

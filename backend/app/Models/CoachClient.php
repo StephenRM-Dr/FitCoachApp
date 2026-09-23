@@ -17,4 +17,15 @@ class CoachClient extends Model
     {
         return $this->belongsTo(User::class, 'client_id');
     }
+
+    /**
+     * ¿El cliente está asignado a este coach? Único punto de verdad para
+     * los checks de ownership coach→cliente en los controladores.
+     */
+    public static function isAssigned(int $coachId, int $clientId): bool
+    {
+        return static::where('coach_id', $coachId)
+            ->where('client_id', $clientId)
+            ->exists();
+    }
 }
