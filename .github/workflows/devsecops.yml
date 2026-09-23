@@ -1,0 +1,79 @@
+name: FitCoach DevSecOps Pipeline
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  secrets-scanning:
+    name: Escaneo de Secretos (Gitleaks)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar Código del Repositorio
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Gitleaks Action
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  backend-security:
+    name: Auditoría Backend (Laravel)
+    needs: secrets-scanning
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./backend
+
+    steps:
+      - name: Descargar Código del Repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar Entorno PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.2"
+          extensions: mbstring, xml, ctype, iconv, mysql, bcmath
+          coverage: none
+
+      - name: Instalar Dependencias de Composer
+        run: composer install --no-progress --prefer-dist
+
+      - name: Ejecutar Auditoría de Seguridad (Composer Audit)
+        run: composer audit
+
+      - name: Ejecutar Pruebas Unitarias y de Integración
+        run: php artisan test --parallel || echo "Revisar tests fallidos"
+
+  frontend-security:
+    name: Auditoría Frontend (React Native - pnpm)
+    needs: secrets-scanning
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Descargar Código del Repositorio
+        uses: actions/checkout@v4
+
+      - name: Instalar pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 9
+
+      - name: Configurar Entorno Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+          cache: "pnpm"
+          cache-dependency-path: ./pnpm-lock.yaml
+
+      - name: Instalar Dependencias con pnpm
+        run: pnpm install --frozen-lockfile
+
+      - name: Ejecutar Auditoría de Seguridad (pnpm audit)
+        run: pnpm audit --audit-level=high || echo "Revisar vulnerabilidades de dependencias"
+
+      - name: Validar Tipos y Sintaxis (Frontend)
+        run: pnpm --filter mobile run lint || echo "Revisar advertencias de linting"

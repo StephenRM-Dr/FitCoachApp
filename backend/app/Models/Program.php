@@ -1,0 +1,32 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+
+class Program extends Model
+{
+    protected $fillable = [
+        'coach_id',
+        'client_id',
+        'name',
+        'start_date',
+        'end_date',
+        'status',
+    ];
+
+    public function coach()
+    {
+        return $this->belongsTo(User::class, 'coach_id');
+    }
+
+    public function client()
+    {
+        return $this->belongsTo(User::class, 'client_id');
+    }
+
+    public function mesocycles()
+    {
+        return $this->hasMany(Mesocycle::class);
+    }
+}

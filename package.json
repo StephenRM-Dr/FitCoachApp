@@ -3,6 +3,7 @@
   "private": true,
   "version": "0.0.1",
   "type": "module",
+  "packageManager": "pnpm@10.33.2",
   "scripts": {
     "build": "vite build",
     "dev": "vite"
@@ -84,7 +85,13 @@
   },
   "pnpm": {
     "overrides": {
-      "vite": "6.3.5"
-    }
+      "vite": "^6.4.2"
+    },
+    "ignoredBuiltDependencies": [
+      "esbuild"
+    ],
+    "onlyBuiltDependencies": [
+      "@tailwindcss/oxide"
+    ]
   }
 }

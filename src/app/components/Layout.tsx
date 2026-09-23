@@ -33,9 +33,8 @@ export function Layout() {
     <div className="flex h-screen bg-gray-50">
       {/* Sidebar */}
       <aside
-        className={`bg-white border-r border-gray-200 transition-all duration-300 ${
-          sidebarOpen ? "w-64" : "w-20"
-        }`}
+        className={`bg-white border-r border-gray-200 transition-all duration-300 ease-in-out w-20${sidebarOpen ? "w-64" : "w-20"
+          }`}
       >
         <div className="flex items-center justify-between p-4 border-b border-gray-200">
           {sidebarOpen && (
@@ -57,11 +56,10 @@ export function Layout() {
               <Link
                 key={item.path}
                 to={item.path}
-                className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-                  active
-                    ? "bg-blue-50 text-blue-600"
-                    : "text-gray-700 hover:bg-gray-100"
-                }`}
+                className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${active
+                  ? "bg-blue-50 text-blue-600"
+                  : "text-gray-700 hover:bg-gray-100"
+                  }`}
               >
                 <Icon size={20} />
                 {sidebarOpen && <span>{item.label}</span>}
