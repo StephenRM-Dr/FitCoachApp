@@ -4,6 +4,13 @@ set -e
 # El puerto lo inyecta la plataforma (Railway/Render/Fly); TLS lo termina ella.
 export SERVER_NAME=":${PORT:-8080}"
 
+# Comandos puntuales (p. ej. el pre-deploy de Railway: `php artisan migrate --force`):
+# se ejecutan tal cual, sin arrancar el servidor. `sh -c` admite que la
+# plataforma pase el comando como un solo argumento o como varios.
+if [ "$#" -gt 0 ]; then
+    exec sh -c "$*"
+fi
+
 # Las cachés se generan en runtime, cuando ya existen las variables de entorno.
 php artisan package:discover --ansi
 php artisan config:cache
