@@ -60,8 +60,9 @@ return [
             'report' => false,
         ],
 
-        // Cloudflare R2 (S3 compatible). Sin ACLs: el acceso público se da
-        // con el dominio público del bucket (R2_PUBLIC_URL).
+        // Cloudflare R2 (S3 compatible). R2 no soporta ACLs: NO definir
+        // 'visibility' (Laravel enviaría x-amz-acl y R2 lo rechaza). El acceso
+        // público se da con el dominio público del bucket (R2_PUBLIC_URL).
         'r2' => [
             'driver' => 's3',
             'key' => env('R2_ACCESS_KEY_ID'),
@@ -71,7 +72,6 @@ return [
             'url' => env('R2_PUBLIC_URL'),
             'endpoint' => env('R2_ENDPOINT'),
             'use_path_style_endpoint' => true,
-            'visibility' => 'public',
             'throw' => false,
             'report' => false,
         ],
