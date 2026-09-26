@@ -444,6 +444,8 @@ export function SessionBuilderScreen({ route, navigation }: any) {
                         style={styles.exerciseThumbnailPlaceholder}
                         onPress={() => pickAndUploadMedia(ex.id)}
                         disabled={uploadingExerciseId === ex.id}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Subir imagen de referencia para ${ex.name}`}
                       >
                         {uploadingExerciseId === ex.id ? (
                           <ActivityIndicator
@@ -486,6 +488,8 @@ export function SessionBuilderScreen({ route, navigation }: any) {
                       <TouchableOpacity
                         onPress={() => pickAndUploadMedia(ex.id)}
                         disabled={uploadingExerciseId === ex.id}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Reemplazar imagen de referencia de ${ex.name}`}
                         style={{ marginRight: Spacing.sm }}
                       >
                         {uploadingExerciseId === ex.id ? (

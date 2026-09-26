@@ -13,6 +13,8 @@ interface RegisterData {
   role?: "coach" | "client";
   gender: "male" | "female";
   coach_code?: string;
+  accept_terms: boolean;
+  accept_health_data: boolean;
 }
 
 interface AuthResponse {
@@ -36,6 +38,12 @@ export const authService = {
 
   login: async (credentials: LoginCredentials): Promise<AuthResponse> => {
     const response = await api.post("/login", credentials);
+    return response.data;
+  },
+
+  /** Elimina la cuenta y todos sus datos (requiere la contraseña actual). */
+  deleteAccount: async (password: string): Promise<{ message: string }> => {
+    const response = await api.delete("/account", { data: { password } });
     return response.data;
   },
 

@@ -11,9 +11,10 @@ import {
   ActivityIndicator,
   Alert,
 } from "react-native";
-import { Lock, Eye, EyeOff, CheckCircle } from "lucide-react-native";
+import { Lock, Eye, EyeOff, CheckCircle, Trash2 } from "lucide-react-native";
 import { useNavigation } from "@react-navigation/native";
 import { authService } from "../../services/authService";
+import { useAuthStore } from "../../store/authStore";
 import { Colors, Spacing, BorderRadius, Typography } from "../../theme";
 
 export function SecurityScreen() {
@@ -23,6 +24,41 @@ export function SecurityScreen() {
   const [passwordConfirmation, setPasswordConfirmation] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [deletePassword, setDeletePassword] = useState("");
+  const [deleting, setDeleting] = useState(false);
+  const logout = useAuthStore((state) => state.logout);
+
+  const confirmDeleteAccount = () => {
+    if (!deletePassword.trim()) {
+      Alert.alert("Error", "Ingresa tu contraseña para confirmar.");
+      return;
+    }
+    Alert.alert(
+      "Eliminar cuenta",
+      "Se borrarán tu cuenta y todos tus datos (perfil, datos de salud, mediciones, entrenamientos). Esta acción no se puede deshacer.",
+      [
+        { text: "Cancelar", style: "cancel" },
+        {
+          text: "Eliminar definitivamente",
+          style: "destructive",
+          onPress: async () => {
+            setDeleting(true);
+            try {
+              await authService.deleteAccount(deletePassword);
+              await logout();
+            } catch (err: any) {
+              const message =
+                err.response?.data?.errors?.password?.[0] ||
+                err.response?.data?.message ||
+                "No se pudo eliminar la cuenta. Intenta de nuevo.";
+              Alert.alert("Error", message);
+              setDeleting(false);
+            }
+          },
+        },
+      ],
+    );
+  };
 
   const handleUpdatePassword = async () => {
     if (
@@ -86,6 +122,7 @@ export function SecurityScreen() {
             <TextInput
               style={styles.input}
               placeholderTextColor={Colors.textMuted}
+              accessibilityLabel="Contraseña actual"
               value={currentPassword}
               onChangeText={setCurrentPassword}
               secureTextEntry={!showPassword}
@@ -100,11 +137,18 @@ export function SecurityScreen() {
             <TextInput
               style={styles.input}
               placeholderTextColor={Colors.textMuted}
+              accessibilityLabel="Nueva contraseña"
               value={password}
               onChangeText={setPassword}
               secureTextEntry={!showPassword}
             />
-            <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+            <TouchableOpacity
+              onPress={() => setShowPassword(!showPassword)}
+              accessibilityRole="button"
+              accessibilityLabel={
+                showPassword ? "Ocultar contraseña" : "Mostrar contraseña"
+              }
+            >
               {showPassword ? (
                 <EyeOff size={20} color={Colors.textMuted} />
               ) : (
@@ -121,6 +165,7 @@ export function SecurityScreen() {
             <TextInput
               style={styles.input}
               placeholderTextColor={Colors.textMuted}
+              accessibilityLabel="Confirmar nueva contraseña"
               value={passwordConfirmation}
               onChangeText={setPasswordConfirmation}
               secureTextEntry={!showPassword}
@@ -141,6 +186,47 @@ export function SecurityScreen() {
             </Text>
           )}
         </TouchableOpacity>
+
+        <View style={styles.dangerZone}>
+          <Text style={[Typography.h5, { color: Colors.danger }]}>
+            Eliminar cuenta
+          </Text>
+          <Text style={Typography.bodySmall}>
+            Borra de forma permanente tu cuenta y todos tus datos. Ingresa tu
+            contraseña para confirmar.
+          </Text>
+          <View style={styles.inputWrapper}>
+            <Lock size={20} color={Colors.textMuted} />
+            <TextInput
+              style={styles.input}
+              placeholder="Tu contraseña"
+              placeholderTextColor={Colors.textMuted}
+              accessibilityLabel="Contraseña para confirmar la eliminación de la cuenta"
+              value={deletePassword}
+              onChangeText={setDeletePassword}
+              secureTextEntry
+              autoCapitalize="none"
+            />
+          </View>
+          <TouchableOpacity
+            style={[styles.deleteButton, deleting && styles.buttonDisabled]}
+            onPress={confirmDeleteAccount}
+            disabled={deleting}
+            accessibilityRole="button"
+            accessibilityLabel="Eliminar mi cuenta y todos mis datos"
+          >
+            {deleting ? (
+              <ActivityIndicator color={Colors.danger} size="small" />
+            ) : (
+              <>
+                <Trash2 size={18} color={Colors.danger} />
+                <Text style={[Typography.buttonText, { color: Colors.danger }]}>
+                  Eliminar mi cuenta
+                </Text>
+              </>
+            )}
+          </TouchableOpacity>
+        </View>
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -178,4 +264,22 @@ const styles = StyleSheet.create({
     marginTop: Spacing.md,
   },
   buttonDisabled: { opacity: 0.7 },
+  dangerZone: {
+    gap: Spacing.md,
+    marginTop: Spacing.xl,
+    padding: Spacing.base,
+    borderRadius: BorderRadius.lg,
+    borderWidth: 1,
+    borderColor: Colors.danger,
+  },
+  deleteButton: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: Spacing.sm,
+    paddingVertical: Spacing.base,
+    borderRadius: BorderRadius.lg,
+    borderWidth: 1,
+    borderColor: Colors.danger,
+  },
 });

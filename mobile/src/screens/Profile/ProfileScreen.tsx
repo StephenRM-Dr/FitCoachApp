@@ -232,6 +232,18 @@ export function ProfileScreen() {
             "FAQ, contacto",
             () => navigation.navigate("HelpSupport"),
           )}
+          {renderMenuItem(
+            <Shield size={20} color={Colors.success} />,
+            "Política de Privacidad",
+            "Cómo tratamos tus datos",
+            () => navigation.navigate("Legal", { doc: "privacy" }),
+          )}
+          {renderMenuItem(
+            <HelpCircle size={20} color={Colors.info} />,
+            "Términos y Condiciones",
+            "Uso del servicio y aviso médico",
+            () => navigation.navigate("Legal", { doc: "terms" }),
+          )}
         </View>
       </View>
 

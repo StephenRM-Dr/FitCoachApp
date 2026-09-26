@@ -9,6 +9,7 @@ import {
 } from "react-native";
 import { Mail, HelpCircle } from "lucide-react-native";
 import { Colors, Spacing, BorderRadius, Typography } from "../../theme";
+import { BUSINESS } from "../../config/business";
 
 const FAQ = [
   {
@@ -21,7 +22,7 @@ const FAQ = [
   },
   {
     q: "¿Olvidé mi contraseña, qué hago?",
-    a: "En la pantalla de inicio de sesión toca '¿Olvidaste tu contraseña?' e ingresa tu correo. Te enviaremos una contraseña temporal.",
+    a: "En la pantalla de inicio de sesión toca '¿Olvidaste tu contraseña?' e ingresa tu correo. Te enviaremos un código de verificación para que establezcas una nueva contraseña.",
   },
 ];
 
@@ -58,7 +59,9 @@ export function HelpSupportScreen() {
 
       <TouchableOpacity
         style={styles.contactCard}
-        onPress={() => Linking.openURL("mailto:soporte@fitcoach.app")}
+        onPress={() => Linking.openURL(`mailto:${BUSINESS.contactEmail}`)}
+        accessibilityRole="link"
+        accessibilityLabel="Contactar soporte por correo electrónico"
       >
         <View style={styles.iconBox}>
           <Mail size={20} color={Colors.primary} />
@@ -67,7 +70,7 @@ export function HelpSupportScreen() {
           <Text style={[Typography.body, { fontWeight: "600" }]}>
             Contactar Soporte
           </Text>
-          <Text style={Typography.caption}>soporte@fitcoach.app</Text>
+          <Text style={Typography.caption}>{BUSINESS.contactEmail}</Text>
         </View>
       </TouchableOpacity>
     </ScrollView>

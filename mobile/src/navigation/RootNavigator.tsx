@@ -39,6 +39,7 @@ import { PersonalInfoScreen } from "../screens/Profile/PersonalInfoScreen";
 import { SecurityScreen } from "../screens/Profile/SecurityScreen";
 import { NotificationsScreen } from "../screens/Profile/NotificationsScreen";
 import { AppearanceScreen } from "../screens/Profile/AppearanceScreen";
+import { LegalScreen } from "../screens/Legal/LegalScreen";
 import { HelpSupportScreen } from "../screens/Profile/HelpSupportScreen";
 
 const Stack = createNativeStackNavigator();
@@ -217,6 +218,11 @@ export const RootNavigator = () => {
         <>
           <Stack.Screen name="Login" component={LoginScreen} />
           <Stack.Screen name="Register" component={RegisterScreen} />
+          <Stack.Screen
+            name="Legal"
+            component={LegalScreen}
+            options={{ headerShown: true, title: "Información Legal" }}
+          />
         </>
       ) : user?.force_password_change ? (
         <Stack.Screen
@@ -264,6 +270,11 @@ export const RootNavigator = () => {
             name="Appearance"
             component={AppearanceScreen}
             options={{ headerShown: true, title: "Apariencia" }}
+          />
+          <Stack.Screen
+            name="Legal"
+            component={LegalScreen}
+            options={{ headerShown: true, title: "Información Legal" }}
           />
           <Stack.Screen
             name="HelpSupport"

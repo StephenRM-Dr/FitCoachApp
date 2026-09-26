@@ -27,9 +27,19 @@ class AuthController extends Controller
             'role' => 'sometimes|in:coach,client',
             'coach_code' => 'required_if:role,coach|nullable|string',
             'gender' => 'required|in:male,female',
+            'accept_terms' => 'accepted',
+            'accept_health_data' => 'boolean',
         ]);
 
         $role = $request->input('role', 'client');
+
+        // Los datos de salud (anamnesis) son sensibles: los clientes deben
+        // autorizar su tratamiento de forma explícita y separada de los términos.
+        if ($role === 'client' && ! $request->boolean('accept_health_data')) {
+            throw ValidationException::withMessages([
+                'accept_health_data' => ['Debes autorizar el tratamiento de tus datos de salud para usar la app.'],
+            ]);
+        }
 
         if ($role === 'coach') {
             $expectedCode = config('fitcoach.coach_registration_code');
@@ -48,6 +58,12 @@ class AuthController extends Controller
             'role' => $role,
             'gender' => $request->gender,
         ]);
+
+        $user->forceFill([
+            'terms_accepted_at' => now(),
+            'terms_version' => config('fitcoach.legal_version'),
+            'health_data_consent_at' => $request->boolean('accept_health_data') ? now() : null,
+        ])->save();
 
         $token = $user->createToken('auth_token')->plainTextToken;
 
@@ -83,6 +99,33 @@ class AuthController extends Controller
             'token_type' => 'Bearer',
             'user' => new UserResource($user),
         ]);
+    }
+
+    /**
+     * Elimina definitivamente la cuenta del usuario autenticado y todos sus
+     * datos (las FK en cascada borran perfil, anamnesis, mediciones, logs,
+     * programas y ejecuciones). Exige la contraseña para que un token robado
+     * no baste para destruir la cuenta. Requisito de Apple/Google.
+     */
+    public function deleteAccount(Request $request)
+    {
+        $request->validate(['password' => 'required|string']);
+
+        $user = $request->user();
+
+        if (! Hash::check($request->password, $user->password)) {
+            throw ValidationException::withMessages([
+                'password' => ['La contraseña no es correcta.'],
+            ]);
+        }
+
+        DB::transaction(function () use ($user) {
+            $user->tokens()->delete();
+            DB::table('password_reset_tokens')->where('email', $user->email)->delete();
+            $user->delete();
+        });
+
+        return response()->json(['message' => 'Tu cuenta y tus datos fueron eliminados.']);
     }
 
     /**

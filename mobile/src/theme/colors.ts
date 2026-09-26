@@ -31,7 +31,7 @@ export const Colors = {
   // Text colors
   textPrimary: "#f8fafc",
   textSecondary: "#d8e0effd",
-  textMuted: "#64748b",
+  textMuted: "#94a3b8", // AA (4.5:1) sobre bg y bgCard; antes #64748b (3.07:1 sobre bgCard)
   textInverse: "#0f172a",
 
   // Borders

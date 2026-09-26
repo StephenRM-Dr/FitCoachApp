@@ -21,6 +21,7 @@ import {
   Eye,
   EyeOff,
   ShieldCheck,
+  Check,
 } from "lucide-react-native";
 import { Colors, Spacing, BorderRadius, Typography } from "../../theme";
 
@@ -32,6 +33,8 @@ export const RegisterScreen = ({ navigation }: any) => {
   const [role, setRole] = useState<"coach" | "client">("client");
   const [gender, setGender] = useState<"male" | "female" | "">("");
   const [coachCode, setCoachCode] = useState("");
+  const [acceptTerms, setAcceptTerms] = useState(false);
+  const [acceptHealthData, setAcceptHealthData] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const { setAuth, setError, error, clearError } = useAuthStore();
@@ -68,6 +71,14 @@ export const RegisterScreen = ({ navigation }: any) => {
       setError("Selecciona tu género.");
       return;
     }
+    if (!acceptTerms) {
+      setError("Debes aceptar los Términos y la Política de Privacidad.");
+      return;
+    }
+    if (role === "client" && !acceptHealthData) {
+      setError("Debes autorizar el tratamiento de tus datos de salud.");
+      return;
+    }
 
     setLoading(true);
     try {
@@ -78,6 +89,8 @@ export const RegisterScreen = ({ navigation }: any) => {
         password_confirmation: passwordConfirmation,
         role,
         gender: gender as "male" | "female",
+        accept_terms: acceptTerms,
+        accept_health_data: acceptHealthData,
         ...(role === "coach" ? { coach_code: coachCode.trim() } : {}),
       });
       setAuth(
@@ -116,6 +129,7 @@ export const RegisterScreen = ({ navigation }: any) => {
           style={styles.input}
           placeholder={options.placeholder}
           placeholderTextColor={Colors.textMuted}
+          accessibilityLabel={label}
           value={value}
           onChangeText={(text) => {
             onChangeText(text);
@@ -128,6 +142,10 @@ export const RegisterScreen = ({ navigation }: any) => {
         {options.secureTextEntry && (
           <TouchableOpacity
             onPress={() => setShowPassword(!showPassword)}
+            accessibilityRole="button"
+            accessibilityLabel={
+              showPassword ? "Ocultar contraseña" : "Mostrar contraseña"
+            }
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
             {showPassword ? (
@@ -338,6 +356,69 @@ export const RegisterScreen = ({ navigation }: any) => {
             },
           )}
 
+          {/* Consentimiento: casillas sin premarcar, con enlaces a los textos */}
+          <View style={styles.consentGroup}>
+            <TouchableOpacity
+              style={styles.consentRow}
+              onPress={() => setAcceptTerms(!acceptTerms)}
+              accessibilityRole="checkbox"
+              accessibilityState={{ checked: acceptTerms }}
+              accessibilityLabel="Acepto los Términos y Condiciones y la Política de Privacidad"
+              activeOpacity={0.7}
+            >
+              <View style={[styles.checkbox, acceptTerms && styles.checkboxOn]}>
+                {acceptTerms && <Check size={14} color={Colors.white} />}
+              </View>
+              <Text style={[Typography.bodySmall, styles.consentText]}>
+                Acepto los{" "}
+                <Text
+                  style={styles.link}
+                  accessibilityRole="link"
+                  onPress={() => navigation.navigate("Legal", { doc: "terms" })}
+                >
+                  Términos y Condiciones
+                </Text>{" "}
+                y la{" "}
+                <Text
+                  style={styles.link}
+                  accessibilityRole="link"
+                  onPress={() =>
+                    navigation.navigate("Legal", { doc: "privacy" })
+                  }
+                >
+                  Política de Privacidad
+                </Text>
+                .
+              </Text>
+            </TouchableOpacity>
+
+            {role === "client" && (
+              <TouchableOpacity
+                style={styles.consentRow}
+                onPress={() => setAcceptHealthData(!acceptHealthData)}
+                accessibilityRole="checkbox"
+                accessibilityState={{ checked: acceptHealthData }}
+                accessibilityLabel="Autorizo el tratamiento de mis datos de salud por mi coach"
+                activeOpacity={0.7}
+              >
+                <View
+                  style={[
+                    styles.checkbox,
+                    acceptHealthData && styles.checkboxOn,
+                  ]}
+                >
+                  {acceptHealthData && <Check size={14} color={Colors.white} />}
+                </View>
+                <Text style={[Typography.bodySmall, styles.consentText]}>
+                  Autorizo que mis datos de salud (lesiones, patologías,
+                  medicamentos y mediciones) sean tratados por mi coach para
+                  planificar mi entrenamiento. Puedo retirar este permiso
+                  eliminando mi cuenta.
+                </Text>
+              </TouchableOpacity>
+            )}
+          </View>
+
           {/* Register button */}
           <TouchableOpacity
             style={[styles.button, loading && styles.buttonDisabled]}
@@ -494,6 +575,28 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 4,
   },
+  consentGroup: { gap: Spacing.md, marginTop: Spacing.sm },
+  consentRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: Spacing.sm,
+  },
+  consentText: { flex: 1 },
+  checkbox: {
+    width: 24,
+    height: 24,
+    borderRadius: 6,
+    borderWidth: 1.5,
+    borderColor: Colors.borderLight,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 1,
+  },
+  checkboxOn: {
+    backgroundColor: Colors.primaryDark,
+    borderColor: Colors.primaryDark,
+  },
+  link: { color: Colors.primaryLight, textDecorationLine: "underline" },
   buttonDisabled: {
     opacity: 0.7,
   },
