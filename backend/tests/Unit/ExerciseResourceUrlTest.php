@@ -38,6 +38,29 @@ class ExerciseResourceUrlTest extends TestCase
         );
     }
 
+    public function test_image_url_comes_from_the_disk_when_media_is_stored_remotely(): void
+    {
+        // En producción las imágenes viven en un bucket (R2/S3): la URL la
+        // da el disco, no el host de la request.
+        config(['fitcoach.media_disk' => 'media']);
+        config(['filesystems.disks.media' => [
+            'driver' => 'local',
+            'root' => storage_path('framework/testing/disks/media'),
+            'url' => 'https://cdn.example.com',
+        ]]);
+
+        $exercise = new Exercise(['name' => 'Sentadilla', 'muscle_group' => 'piernas']);
+        $exercise->image_url = 'exercises/abc123.gif';
+
+        $request = Request::create('/api/v1/exercises', 'GET', [], [], [], [
+            'HTTP_HOST' => 'sift-aptly-waggle.ngrok-free.dev',
+        ]);
+
+        $data = (new ExerciseResource($exercise))->toArray($request);
+
+        $this->assertSame('https://cdn.example.com/exercises/abc123.gif', $data['image_url']);
+    }
+
     public function test_image_url_is_null_when_exercise_has_no_image(): void
     {
         $exercise = new Exercise(['name' => 'Plancha', 'muscle_group' => 'core']);

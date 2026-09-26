@@ -37,7 +37,7 @@ class ExerciseController extends Controller
         // absoluta: la URL final se arma en ExerciseResource a partir del
         // host de cada request, para que funcione igual detrás de un túnel
         // (ngrok/IP LAN) cuyo host no coincide con el APP_URL del backend.
-        $exercise->image_url = Storage::disk('public')->putFile('exercises', $request->file('image'));
+        $exercise->image_url = Storage::disk(config('fitcoach.media_disk'))->putFile('exercises', $request->file('image'));
         $exercise->save();
 
         return new ExerciseResource($exercise);

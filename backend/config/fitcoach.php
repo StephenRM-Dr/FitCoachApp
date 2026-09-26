@@ -28,4 +28,17 @@ return [
 
     'legal_version' => '1.0',
 
+    /*
+    |--------------------------------------------------------------------------
+    | Disco de imágenes del catálogo de ejercicios
+    |--------------------------------------------------------------------------
+    |
+    | "public" guarda en disco local (desarrollo). En producción usa "r2"
+    | (Cloudflare R2 / cualquier S3 compatible): los hosts modernos borran el
+    | disco local en cada deploy, y las imágenes desaparecerían.
+    |
+    */
+
+    'media_disk' => env('EXERCISE_MEDIA_DISK', 'public'),
+
 ];

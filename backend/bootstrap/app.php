@@ -12,6 +12,10 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        // Detrás del proxy del host (Railway/Render/Fly/ngrok) el TLS termina
+        // fuera de la app: sin esto Laravel cree que la request es http.
+        $middleware->trustProxies(at: env('TRUSTED_PROXIES', '*'));
+
         $middleware->alias([
             'role' => \App\Http\Middleware\EnsureRole::class,
         ]);
