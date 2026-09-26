@@ -39,6 +39,7 @@ import { PersonalInfoScreen } from "../screens/Profile/PersonalInfoScreen";
 import { SecurityScreen } from "../screens/Profile/SecurityScreen";
 import { NotificationsScreen } from "../screens/Profile/NotificationsScreen";
 import { AppearanceScreen } from "../screens/Profile/AppearanceScreen";
+import { LegalAcceptanceScreen } from "../screens/Auth/LegalAcceptanceScreen";
 import { LegalScreen } from "../screens/Legal/LegalScreen";
 import { HelpSupportScreen } from "../screens/Profile/HelpSupportScreen";
 
@@ -229,6 +230,18 @@ export const RootNavigator = () => {
           name="ForcePasswordChange"
           component={ForcePasswordChangeScreen}
         />
+      ) : user?.needs_legal_acceptance ? (
+        <>
+          <Stack.Screen
+            name="LegalAcceptance"
+            component={LegalAcceptanceScreen}
+          />
+          <Stack.Screen
+            name="Legal"
+            component={LegalScreen}
+            options={{ headerShown: true, title: "Información Legal" }}
+          />
+        </>
       ) : (
         <>
           {user?.role === "coach" ? (

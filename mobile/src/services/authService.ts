@@ -27,6 +27,7 @@ interface AuthResponse {
     role: "coach" | "client";
     gender?: "male" | "female" | null;
     force_password_change?: boolean;
+    needs_legal_acceptance?: boolean;
   };
 }
 
@@ -38,6 +39,21 @@ export const authService = {
 
   login: async (credentials: LoginCredentials): Promise<AuthResponse> => {
     const response = await api.post("/login", credentials);
+    return response.data;
+  },
+
+  /** Usuario actual con sus banderas al día (el guardado en el dispositivo puede estar desactualizado). */
+  me: async (): Promise<AuthResponse["user"]> => {
+    const response = await api.get("/me");
+    return response.data;
+  },
+
+  /** Registra la aceptación de la versión vigente de los textos legales. */
+  acceptLegal: async (data: {
+    accept_terms: boolean;
+    accept_health_data?: boolean;
+  }): Promise<AuthResponse["user"]> => {
+    const response = await api.post("/legal/accept", data);
     return response.data;
   },
 

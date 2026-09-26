@@ -21,9 +21,9 @@ import {
   Eye,
   EyeOff,
   ShieldCheck,
-  Check,
 } from "lucide-react-native";
 import { Colors, Spacing, BorderRadius, Typography } from "../../theme";
+import { ConsentCheckboxes } from "../../components/legal/ConsentCheckboxes";
 
 export const RegisterScreen = ({ navigation }: any) => {
   const [name, setName] = useState("");
@@ -356,68 +356,14 @@ export const RegisterScreen = ({ navigation }: any) => {
             },
           )}
 
-          {/* Consentimiento: casillas sin premarcar, con enlaces a los textos */}
-          <View style={styles.consentGroup}>
-            <TouchableOpacity
-              style={styles.consentRow}
-              onPress={() => setAcceptTerms(!acceptTerms)}
-              accessibilityRole="checkbox"
-              accessibilityState={{ checked: acceptTerms }}
-              accessibilityLabel="Acepto los Términos y Condiciones y la Política de Privacidad"
-              activeOpacity={0.7}
-            >
-              <View style={[styles.checkbox, acceptTerms && styles.checkboxOn]}>
-                {acceptTerms && <Check size={14} color={Colors.white} />}
-              </View>
-              <Text style={[Typography.bodySmall, styles.consentText]}>
-                Acepto los{" "}
-                <Text
-                  style={styles.link}
-                  accessibilityRole="link"
-                  onPress={() => navigation.navigate("Legal", { doc: "terms" })}
-                >
-                  Términos y Condiciones
-                </Text>{" "}
-                y la{" "}
-                <Text
-                  style={styles.link}
-                  accessibilityRole="link"
-                  onPress={() =>
-                    navigation.navigate("Legal", { doc: "privacy" })
-                  }
-                >
-                  Política de Privacidad
-                </Text>
-                .
-              </Text>
-            </TouchableOpacity>
-
-            {role === "client" && (
-              <TouchableOpacity
-                style={styles.consentRow}
-                onPress={() => setAcceptHealthData(!acceptHealthData)}
-                accessibilityRole="checkbox"
-                accessibilityState={{ checked: acceptHealthData }}
-                accessibilityLabel="Autorizo el tratamiento de mis datos de salud por mi coach"
-                activeOpacity={0.7}
-              >
-                <View
-                  style={[
-                    styles.checkbox,
-                    acceptHealthData && styles.checkboxOn,
-                  ]}
-                >
-                  {acceptHealthData && <Check size={14} color={Colors.white} />}
-                </View>
-                <Text style={[Typography.bodySmall, styles.consentText]}>
-                  Autorizo que mis datos de salud (lesiones, patologías,
-                  medicamentos y mediciones) sean tratados por mi coach para
-                  planificar mi entrenamiento. Puedo retirar este permiso
-                  eliminando mi cuenta.
-                </Text>
-              </TouchableOpacity>
-            )}
-          </View>
+          <ConsentCheckboxes
+            acceptTerms={acceptTerms}
+            onChangeTerms={setAcceptTerms}
+            showHealthData={role === "client"}
+            acceptHealthData={acceptHealthData}
+            onChangeHealthData={setAcceptHealthData}
+            onOpenDocument={(doc) => navigation.navigate("Legal", { doc })}
+          />
 
           {/* Register button */}
           <TouchableOpacity
@@ -575,28 +521,6 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 4,
   },
-  consentGroup: { gap: Spacing.md, marginTop: Spacing.sm },
-  consentRow: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: Spacing.sm,
-  },
-  consentText: { flex: 1 },
-  checkbox: {
-    width: 24,
-    height: 24,
-    borderRadius: 6,
-    borderWidth: 1.5,
-    borderColor: Colors.borderLight,
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: 1,
-  },
-  checkboxOn: {
-    backgroundColor: Colors.primaryDark,
-    borderColor: Colors.primaryDark,
-  },
-  link: { color: Colors.primaryLight, textDecorationLine: "underline" },
   buttonDisabled: {
     opacity: 0.7,
   },

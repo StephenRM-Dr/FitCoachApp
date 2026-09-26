@@ -32,6 +32,8 @@ Route::prefix('v1')->middleware('throttle:10,1')->group(function () {
 });
 
 Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
+    Route::get('me', [AuthController::class, 'me']);
+    Route::post('legal/accept', [AuthController::class, 'acceptLegal']);
     Route::post('logout', [AuthController::class, 'logout']);
     Route::delete('account', [AuthController::class, 'deleteAccount']);
     Route::post('password/update', [AuthController::class, 'updatePassword']);

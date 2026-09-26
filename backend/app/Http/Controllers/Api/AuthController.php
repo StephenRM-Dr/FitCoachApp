@@ -129,6 +129,40 @@ class AuthController extends Controller
     }
 
     /**
+     * Usuario autenticado, con sus banderas actuales (p. ej. si debe volver
+     * a aceptar los términos). La app lo consulta al restaurar la sesión,
+     * porque el usuario guardado en el dispositivo puede estar desactualizado.
+     */
+    public function me(Request $request)
+    {
+        return new UserResource($request->user());
+    }
+
+    /**
+     * Registra la aceptación de la versión vigente de los textos legales.
+     * Los clientes deben además autorizar el tratamiento de datos de salud.
+     */
+    public function acceptLegal(Request $request)
+    {
+        $user = $request->user();
+
+        $request->validate([
+            'accept_terms' => 'accepted',
+            'accept_health_data' => $user->role === 'client' ? 'accepted' : 'boolean',
+        ]);
+
+        $user->forceFill([
+            'terms_accepted_at' => now(),
+            'terms_version' => config('fitcoach.legal_version'),
+            'health_data_consent_at' => $request->boolean('accept_health_data')
+                ? now()
+                : $user->health_data_consent_at,
+        ])->save();
+
+        return new UserResource($user);
+    }
+
+    /**
      * Cierre de sesión.
      */
     public function logout(Request $request)

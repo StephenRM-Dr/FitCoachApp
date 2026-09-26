@@ -33,6 +33,20 @@ class User extends Authenticatable
     }
 
     /**
+     * ¿Debe volver a aceptar los textos legales? Sí si nunca los aceptó
+     * (cuenta anterior al registro de consentimiento), si cambió la versión
+     * vigente, o si es cliente y no autorizó el tratamiento de datos de salud.
+     */
+    public function needsLegalAcceptance(): bool
+    {
+        if ($this->terms_version !== config('fitcoach.legal_version')) {
+            return true;
+        }
+
+        return $this->role === 'client' && $this->health_data_consent_at === null;
+    }
+
+    /**
      * Asignaciones de clientes cuando este usuario es coach.
      */
     public function clientAssignments()

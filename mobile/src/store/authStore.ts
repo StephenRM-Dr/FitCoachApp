@@ -13,6 +13,8 @@ export interface User {
   role: UserRole;
   gender?: Gender | null;
   force_password_change?: boolean;
+  /** El backend pide (re)aceptar términos: versión nueva o cuenta anterior al consentimiento. */
+  needs_legal_acceptance?: boolean;
 }
 
 interface AuthState {

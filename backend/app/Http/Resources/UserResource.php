@@ -23,6 +23,7 @@ class UserResource extends JsonResource
             'role' => $this->role,
             'gender' => $this->gender,
             'force_password_change' => (bool) $this->force_password_change,
+            'needs_legal_acceptance' => $this->needsLegalAcceptance(),
         ];
     }
 }

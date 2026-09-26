@@ -20,7 +20,7 @@ Vigencia de normas no verificada con búsqueda web en esta sesión.
 | Política de privacidad | ⚠️ parcial | Redactada y accesible en la app; faltan datos del titular y terceros (`[COMPLETAR]`); falta URL pública para tiendas |
 | Términos y condiciones | ⚠️ parcial | Redactados con aviso médico; faltan ley aplicable y datos del titular |
 | Consentimiento en registro | ✅ corregido | Casillas sin premarcar (términos + datos de salud, separadas), obligatorias en backend, con evidencia (fecha + versión) |
-| Datos sensibles (salud) | ⚠️ parcial | Consentimiento explícito y separado para clientes; sin cifrado a nivel de aplicación; sin flujo de re-consentimiento para cuentas previas |
+| Datos sensibles (salud) | ⚠️ parcial | Consentimiento explícito y separado para clientes, con flujo de re-aceptación para cuentas previas; sin cifrado a nivel de aplicación |
 | Eliminación de cuenta | ✅ corregido | `DELETE /api/v1/account` + pantalla Seguridad → Eliminar cuenta (pide contraseña) |
 | Exportación / acceso a datos | ❌ pendiente | Sin endpoint de exportación; la política lo canaliza por correo |
 | Cookies / banner | ✅ no aplica | App móvil sin cookies ni SDK de terceros; ver decisión abajo |
@@ -102,7 +102,7 @@ Resend, SendGrid y PayPal que reporta el escáner son paquetes de `vendor/` (dep
 
 **Alta**
 - **Datos de salud vía ngrok:** el túnel de ngrok procesa el tráfico completo de la API. Para demo con datos ficticios es aceptable; con usuarios reales exige alojar el backend con HTTPS propio y nombrar al proveedor en la política.
-- **Cuentas previas sin consentimiento registrado:** los usuarios creados antes de esta versión tienen `terms_accepted_at = NULL`. Sin prueba de consentimiento sobre datos de salud, la base legal es débil. Propuesta: pantalla de re-aceptación en el primer inicio de sesión cuando `terms_version` sea NULL o distinto de la vigente (no implementada).
+- ~~**Cuentas previas sin consentimiento registrado**~~ **Resuelto (2026-09-26):** `needs_legal_acceptance` en la respuesta de usuario, `GET /v1/me`, `POST /v1/legal/accept` y pantalla bloqueante de re-aceptación; la app refresca el usuario al abrir. Al cambiar los textos, sube `LEGAL_VERSION` (mobile) y `legal_version` (backend).
 
 **Media**
 - **Sin verificación de edad:** los términos declaran 18+ pero el registro no lo comprueba. En apps de fitness/salud el riesgo con menores es relevante.
