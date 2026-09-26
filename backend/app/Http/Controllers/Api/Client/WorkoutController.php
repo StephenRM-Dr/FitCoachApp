@@ -9,10 +9,13 @@ use App\Http\Resources\WorkoutSessionResource;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
+use App\Models\ExecutionSet;
+use App\Models\Exercise;
 use App\Models\Program;
 use App\Models\WorkoutSession;
 use App\Models\WorkoutExecution;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class WorkoutController extends Controller
 {
@@ -22,9 +25,18 @@ class WorkoutController extends Controller
      */
     public function activeProgram(Request $request)
     {
+        // Solo la semana en curso (último mesociclo → microciclo con mayor
+        // week_number, el mismo criterio que usa el coach). Cargar todo el
+        // árbol crece con cada semana planificada y la app solo muestra esta.
+        // El límite de una carga anidada es global, no por padre: es correcto
+        // aquí porque hay un único programa y un único mesociclo cargados.
         $program = Program::where('client_id', $request->user()->id)
             ->where('status', 'active')
-            ->with('mesocycles.microcycles.workoutSessions.sessionExercises.exercise')
+            ->with([
+                'mesocycles' => fn ($q) => $q->orderByDesc('start_week')->limit(1),
+                'mesocycles.microcycles' => fn ($q) => $q->orderByDesc('week_number')->limit(1),
+                'mesocycles.microcycles.workoutSessions.sessionExercises.exercise',
+            ])
             ->first();
             
         if (!$program) {
@@ -66,7 +78,7 @@ class WorkoutController extends Controller
             'started_at' => 'nullable|date',
             'completed_at' => 'nullable|date|after_or_equal:started_at',
             'sets' => 'required|array|min:1',
-            'sets.*.exercise_id' => 'required|exists:exercises,id',
+            'sets.*.exercise_id' => 'required|integer',
             'sets.*.set_number' => 'required|integer|min:1',
             'sets.*.weight_kg' => 'nullable|numeric|min:0|max:1000',
             'sets.*.reps_performed' => 'nullable|integer|min:0|max:500',
@@ -74,6 +86,20 @@ class WorkoutController extends Controller
             'sets.*.rir' => 'nullable|integer|between:0,10',
             'sets.*.notes' => 'nullable|string|max:1000',
         ]);
+
+        // Una sola consulta para todos los ejercicios (la regla "exists" por
+        // cada serie hacía una query por serie).
+        $knownExerciseIds = Exercise::whereIn('id', collect($request->sets)->pluck('exercise_id')->unique())
+            ->pluck('id')
+            ->all();
+
+        foreach ($request->sets as $index => $setData) {
+            if (! in_array((int) $setData['exercise_id'], $knownExerciseIds, true)) {
+                throw ValidationException::withMessages([
+                    "sets.{$index}.exercise_id" => ['El ejercicio seleccionado no es válido.'],
+                ]);
+            }
+        }
 
         // Verify ownership (404 si la sesión no pertenece a un programa del cliente)
         WorkoutSession::whereHas('microcycle.mesocycle.program', function($q) use ($request) {
@@ -91,8 +117,13 @@ class WorkoutController extends Controller
             ]);
 
             // Inserción en bloque: una sesión típica trae 20-40 series.
-            $exec->executionSets()->createMany(
+            // insert() masivo: createMany() hace un INSERT por serie.
+            $now = now();
+            ExecutionSet::insert(
                 collect($request->sets)->map(fn ($setData) => [
+                    'workout_execution_id' => $exec->id,
+                    'created_at' => $now,
+                    'updated_at' => $now,
                     'exercise_id' => $setData['exercise_id'],
                     'set_number' => $setData['set_number'],
                     'weight_kg' => $setData['weight_kg'] ?? null,
@@ -120,7 +151,7 @@ class WorkoutController extends Controller
         $executions = WorkoutExecution::where('user_id', $request->user()->id)
             ->with(['workoutSession', 'executionSets.exercise'])
             ->orderBy('completed_at', 'desc')
-            ->paginate($request->integer('per_page', 20));
+            ->paginate(min(max($request->integer('per_page', 20), 1), 50));
 
         return WorkoutExecutionResource::collection($executions);
     }
