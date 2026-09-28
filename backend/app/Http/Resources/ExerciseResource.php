@@ -12,6 +12,7 @@ class ExerciseResource extends JsonResource
     {
         return [
             'id' => $this->id,
+            'coach_id' => $this->coach_id,
             'name' => $this->name,
             'muscle_group' => $this->muscle_group,
             'description' => $this->description,

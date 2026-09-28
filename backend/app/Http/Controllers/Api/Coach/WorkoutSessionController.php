@@ -39,14 +39,7 @@ class WorkoutSessionController extends Controller
             ]);
             
             $session->sessionExercises()->createMany(
-                collect($validated['exercises'])->values()->map(fn ($exData, $index) => [
-                    'exercise_id' => $exData['exercise_id'],
-                    'order' => $index + 1,
-                    'target_sets' => $exData['target_sets'] ?? null,
-                    'target_reps' => $exData['target_reps'] ?? null,
-                    'target_rpe' => $exData['target_rpe'] ?? null,
-                    'rest_time_seconds' => $exData['rest_time_seconds'] ?? null,
-                ])->all()
+                $this->exerciseRows($validated['exercises'])
             );
 
             return $session->load('sessionExercises.exercise');
@@ -97,20 +90,39 @@ class WorkoutSessionController extends Controller
 
             $session->sessionExercises()->delete();
             $session->sessionExercises()->createMany(
-                collect($validated['exercises'])->values()->map(fn ($exData, $index) => [
-                    'exercise_id' => $exData['exercise_id'],
-                    'order' => $index + 1,
-                    'target_sets' => $exData['target_sets'] ?? null,
-                    'target_reps' => $exData['target_reps'] ?? null,
-                    'target_rpe' => $exData['target_rpe'] ?? null,
-                    'rest_time_seconds' => $exData['rest_time_seconds'] ?? null,
-                ])->all()
+                $this->exerciseRows($validated['exercises'])
             );
 
             return $session->fresh('sessionExercises.exercise');
         });
 
         return new WorkoutSessionResource($session);
+    }
+
+    /**
+     * Normaliza los ejercicios del request a filas de session_exercises.
+     * Los pesos vacíos se descartan; sin ninguno se guarda null.
+     */
+    private function exerciseRows(array $exercises): array
+    {
+        return collect($exercises)->values()->map(function ($exData, $index) {
+            $weights = collect($exData['target_weights'] ?? [])
+                ->filter(fn ($w) => $w !== null && $w !== '')
+                ->map(fn ($w) => (float) $w)
+                ->values()
+                ->all();
+
+            return [
+                'exercise_id' => $exData['exercise_id'],
+                'order' => $index + 1,
+                'target_sets' => $exData['target_sets'] ?? null,
+                'target_reps' => $exData['target_reps'] ?? null,
+                'target_weights' => $weights ?: null,
+                'weight_unit' => $exData['weight_unit'] ?? 'kg',
+                'target_rpe' => $exData['target_rpe'] ?? null,
+                'rest_time_seconds' => $exData['rest_time_seconds'] ?? null,
+            ];
+        })->all();
     }
 
     /**

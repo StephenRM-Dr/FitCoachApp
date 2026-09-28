@@ -3,6 +3,7 @@
 namespace App\Http\Requests\Api\Coach;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class StoreWorkoutSessionRequest extends FormRequest
 {
@@ -23,9 +24,18 @@ class StoreWorkoutSessionRequest extends FormRequest
             'name' => 'required|string|max:100',
             'day_of_week' => 'nullable|in:lunes,martes,miercoles,jueves,viernes,sabado,domingo',
             'exercises' => 'required|array',
-            'exercises.*.exercise_id' => 'required|exists:exercises,id',
+            // Solo ejercicios del catálogo global o creados por este coach.
+            'exercises.*.exercise_id' => [
+                'required',
+                Rule::exists('exercises', 'id')->where(
+                    fn ($q) => $q->whereNull('coach_id')->orWhere('coach_id', $this->user()->id)
+                ),
+            ],
             'exercises.*.target_sets' => 'nullable|integer',
             'exercises.*.target_reps' => 'nullable|integer',
+            'exercises.*.target_weights' => 'nullable|array|max:3',
+            'exercises.*.target_weights.*' => 'nullable|numeric|min:0|max:2000',
+            'exercises.*.weight_unit' => 'nullable|in:kg,lb',
             'exercises.*.target_rpe' => 'nullable|integer',
             'exercises.*.rest_time_seconds' => 'nullable|integer',
         ];

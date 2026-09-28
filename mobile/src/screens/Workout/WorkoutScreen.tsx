@@ -30,7 +30,12 @@ import {
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { workoutService } from "../../services/workoutService";
 import { Colors, Spacing, BorderRadius, Typography } from "../../theme";
-import { Program, WorkoutSession, DAY_OF_WEEK_LABELS } from "../../types";
+import {
+  Program,
+  WorkoutSession,
+  DAY_OF_WEEK_LABELS,
+  formatTargetWeights,
+} from "../../types";
 import { buildWeekPlan, dayOfWeekFor } from "../../utils/weekPlan";
 
 export const WorkoutScreen = () => {
@@ -303,6 +308,18 @@ export const WorkoutScreen = () => {
                           Objetivo: {se.target_sets} x {se.target_reps} @RPE{" "}
                           {se.target_rpe}
                         </Text>
+                        {!!formatTargetWeights(
+                          se.target_weights,
+                          se.weight_unit,
+                        ) && (
+                          <Text style={Typography.caption}>
+                            Peso aprox.:{" "}
+                            {formatTargetWeights(
+                              se.target_weights,
+                              se.weight_unit,
+                            )}
+                          </Text>
+                        )}
                         {!!se.rest_time_seconds && (
                           <View style={styles.restRow}>
                             <Clock size={11} color={Colors.textMuted} />

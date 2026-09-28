@@ -23,7 +23,16 @@ import {
   DayOfWeek,
   DAYS_OF_WEEK,
   DAY_OF_WEEK_LABELS,
+  WeightUnit,
 } from "../../types";
+
+const WEIGHT_SLOTS = 3;
+
+// Los pesos se editan como texto (3 casillas fijas); se convierten a número al guardar.
+const toWeightInputs = (weights: number[] | null | undefined): string[] =>
+  Array.from({ length: WEIGHT_SLOTS }, (_, i) =>
+    weights?.[i] != null ? String(weights[i]) : "",
+  );
 
 export function SessionBuilderScreen({ route, navigation }: any) {
   const {
@@ -46,6 +55,9 @@ export function SessionBuilderScreen({ route, navigation }: any) {
   const [selectedExercises, setSelectedExercises] = useState<any[]>([]);
   const [isExerciseModalVisible, setIsExerciseModalVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [isCreatingExercise, setIsCreatingExercise] = useState(false);
+  const [newExerciseName, setNewExerciseName] = useState("");
+  const [newExerciseMuscle, setNewExerciseMuscle] = useState("");
   const [uploadingExerciseId, setUploadingExerciseId] = useState<number | null>(
     null,
   );
@@ -79,6 +91,8 @@ export function SessionBuilderScreen({ route, navigation }: any) {
         exercise_id: se.exercise_id,
         target_sets: se.target_sets ?? 0,
         target_reps: se.target_reps ?? 0,
+        target_weights: toWeightInputs(se.target_weights),
+        weight_unit: se.weight_unit ?? "kg",
         target_rpe: se.target_rpe ?? 0,
         rest_time_seconds: se.rest_time_seconds ?? 0,
       })),
@@ -170,6 +184,36 @@ export function SessionBuilderScreen({ route, navigation }: any) {
     onSettled: () => setUploadingExerciseId(null),
   });
 
+  const createExerciseMutation = useMutation({
+    mutationFn: () =>
+      coachService.createExercise({
+        name: newExerciseName.trim(),
+        muscle_group: newExerciseMuscle.trim(),
+      }),
+    onSuccess: (created) => {
+      queryClient.invalidateQueries({ queryKey: ["exercises"] });
+      setNewExerciseName("");
+      setNewExerciseMuscle("");
+      setIsCreatingExercise(false);
+      addExercise(created);
+    },
+    onError: (error: any) => {
+      Alert.alert(
+        "Error",
+        error.response?.data?.message ||
+          "No se pudo crear el ejercicio. Intenta de nuevo.",
+      );
+    },
+  });
+
+  const handleCreateExercise = () => {
+    if (!newExerciseName.trim() || !newExerciseMuscle.trim()) {
+      Alert.alert("Error", "Indica el nombre y el grupo muscular");
+      return;
+    }
+    createExerciseMutation.mutate();
+  };
+
   const pickAndUploadMedia = async (exerciseId: number) => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
@@ -212,13 +256,15 @@ export function SessionBuilderScreen({ route, navigation }: any) {
   );
 
   const addExercise = (ex: Exercise) => {
-    setSelectedExercises([
-      ...selectedExercises,
+    setSelectedExercises((current) => [
+      ...current,
       {
         ...ex,
         exercise_id: ex.id,
         target_sets: 3,
         target_reps: 10,
+        target_weights: toWeightInputs(null),
+        weight_unit: "kg" as WeightUnit,
         target_rpe: 8,
         rest_time_seconds: 90,
       },
@@ -231,9 +277,15 @@ export function SessionBuilderScreen({ route, navigation }: any) {
   };
 
   const updateExerciseData = (index: number, field: string, value: any) => {
-    const updated = [...selectedExercises];
-    updated[index][field] = value;
-    setSelectedExercises(updated);
+    setSelectedExercises((current) =>
+      current.map((ex, i) => (i === index ? { ...ex, [field]: value } : ex)),
+    );
+  };
+
+  const updateWeight = (index: number, slot: number, value: string) => {
+    const weights = [...selectedExercises[index].target_weights];
+    weights[slot] = value.replace(",", ".");
+    updateExerciseData(index, "target_weights", weights);
   };
 
   const handleSave = () => {
@@ -248,6 +300,10 @@ export function SessionBuilderScreen({ route, navigation }: any) {
         exercise_id: ex.exercise_id,
         target_sets: parseInt(String(ex.target_sets)) || 0,
         target_reps: parseInt(String(ex.target_reps)) || 0,
+        target_weights: (ex.target_weights as string[])
+          .map((w) => parseFloat(w))
+          .filter((w) => !isNaN(w) && w >= 0),
+        weight_unit: ex.weight_unit,
         target_rpe: parseInt(String(ex.target_rpe)) || 0,
         rest_time_seconds: parseInt(String(ex.rest_time_seconds)) || 0,
       })),
@@ -353,7 +409,7 @@ export function SessionBuilderScreen({ route, navigation }: any) {
               </TouchableOpacity>
             </View>
 
-            <View style={styles.paramsRow}>
+            <View style={[styles.paramsRow, { marginBottom: Spacing.md }]}>
               <View style={styles.paramGroup}>
                 <Text style={styles.paramLabel}>Series</Text>
                 <TextInput
@@ -376,6 +432,52 @@ export function SessionBuilderScreen({ route, navigation }: any) {
                   }
                 />
               </View>
+            </View>
+
+            <View style={styles.weightsHeader}>
+              <Text style={styles.paramLabel}>Peso aprox.</Text>
+              <View style={styles.unitToggle}>
+                {(["kg", "lb"] as WeightUnit[]).map((unit) => (
+                  <TouchableOpacity
+                    key={unit}
+                    style={[
+                      styles.unitOption,
+                      ex.weight_unit === unit && styles.unitOptionActive,
+                    ]}
+                    onPress={() =>
+                      updateExerciseData(index, "weight_unit", unit)
+                    }
+                    accessibilityRole="button"
+                    accessibilityLabel={`Usar ${unit === "kg" ? "kilogramos" : "libras"}`}
+                  >
+                    <Text
+                      style={[
+                        styles.unitOptionText,
+                        ex.weight_unit === unit && styles.unitOptionTextActive,
+                      ]}
+                    >
+                      {unit}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+            <View style={[styles.paramsRow, { marginBottom: Spacing.md }]}>
+              {(ex.target_weights as string[]).map((w, slot) => (
+                <View key={slot} style={styles.paramGroup}>
+                  <TextInput
+                    style={styles.paramInput}
+                    keyboardType="decimal-pad"
+                    value={w}
+                    placeholder={`Peso ${slot + 1}`}
+                    placeholderTextColor={Colors.textMuted}
+                    onChangeText={(v) => updateWeight(index, slot, v)}
+                  />
+                </View>
+              ))}
+            </View>
+
+            <View style={styles.paramsRow}>
               <View style={styles.paramGroup}>
                 <Text style={styles.paramLabel}>RPE</Text>
                 <TextInput
@@ -462,6 +564,59 @@ export function SessionBuilderScreen({ route, navigation }: any) {
                 </TouchableOpacity>
               )}
             </View>
+
+            {isCreatingExercise ? (
+              <View style={styles.createForm}>
+                <TextInput
+                  style={styles.input}
+                  value={newExerciseName}
+                  onChangeText={setNewExerciseName}
+                  placeholder="Nombre (ej. Hip Thrust)"
+                  placeholderTextColor={Colors.textMuted}
+                  maxLength={100}
+                />
+                <TextInput
+                  style={styles.input}
+                  value={newExerciseMuscle}
+                  onChangeText={setNewExerciseMuscle}
+                  placeholder="Grupo muscular (ej. Glúteos)"
+                  placeholderTextColor={Colors.textMuted}
+                  maxLength={50}
+                />
+                <View style={styles.createFormActions}>
+                  <TouchableOpacity
+                    style={[styles.createFormButton, styles.createFormCancel]}
+                    onPress={() => setIsCreatingExercise(false)}
+                  >
+                    <Text style={styles.createFormCancelText}>Cancelar</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={styles.createFormButton}
+                    onPress={handleCreateExercise}
+                    disabled={createExerciseMutation.isPending}
+                  >
+                    {createExerciseMutation.isPending ? (
+                      <ActivityIndicator color={Colors.white} />
+                    ) : (
+                      <Text style={styles.addButtonText}>Crear y añadir</Text>
+                    )}
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ) : (
+              <TouchableOpacity
+                style={styles.newExerciseButton}
+                onPress={() => {
+                  setNewExerciseName(searchQuery);
+                  setIsCreatingExercise(true);
+                }}
+              >
+                <Plus size={18} color={Colors.primary} />
+                <Text style={styles.newExerciseButtonText}>
+                  Crear ejercicio nuevo
+                </Text>
+              </TouchableOpacity>
+            )}
 
             {loadingExercises ? (
               <View style={styles.loaderContainer}>
@@ -643,6 +798,57 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.md,
   },
   paramsRow: { flexDirection: "row", gap: Spacing.md },
+  weightsHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 4,
+  },
+  unitToggle: {
+    flexDirection: "row",
+    borderRadius: BorderRadius.sm,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    overflow: "hidden",
+  },
+  unitOption: { paddingHorizontal: Spacing.md, paddingVertical: 4 },
+  unitOptionActive: { backgroundColor: Colors.primary },
+  unitOptionText: { color: Colors.textMuted, fontWeight: "700", fontSize: 12 },
+  unitOptionTextActive: { color: Colors.white },
+  newExerciseButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    marginHorizontal: Spacing.lg,
+    marginBottom: Spacing.md,
+    padding: Spacing.md,
+    borderRadius: BorderRadius.lg,
+    borderWidth: 1,
+    borderColor: Colors.primary,
+    borderStyle: "dashed",
+  },
+  newExerciseButtonText: { color: Colors.primary, fontWeight: "700" },
+  createForm: {
+    marginHorizontal: Spacing.lg,
+    marginBottom: Spacing.md,
+    gap: Spacing.sm,
+  },
+  createFormActions: { flexDirection: "row", gap: Spacing.sm },
+  createFormButton: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    padding: Spacing.md,
+    borderRadius: BorderRadius.md,
+    backgroundColor: Colors.primary,
+  },
+  createFormCancel: {
+    backgroundColor: Colors.bgCard,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  createFormCancelText: { color: Colors.textSecondary, fontWeight: "700" },
   paramGroup: { flex: 1 },
   paramLabel: {
     fontSize: 10,

@@ -147,4 +147,14 @@ export const coachService = {
     );
     return response.data as Exercise;
   },
+
+  /** Crea un ejercicio personalizado (solo visible para este coach). */
+  createExercise: async (data: {
+    name: string;
+    muscle_group: string;
+    description?: string | null;
+  }) => {
+    const response = await api.post("/coach/exercises", data);
+    return response.data as Exercise;
+  },
 };

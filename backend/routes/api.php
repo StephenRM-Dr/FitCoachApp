@@ -64,6 +64,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
         Route::get('my-clients', [CoachController::class, 'getMyClients']);
 
         Route::post('clients/{clientId}/weekly-plan', [WeeklyPlanController::class, 'ensureCurrent']);
+        Route::post('exercises', [ExerciseController::class, 'store']);
         Route::post('exercises/{exercise}/media', [ExerciseController::class, 'uploadMedia']);
         Route::put('clients/{clientId}/nutrition-settings', [NutritionSettingsController::class, 'update']);
 

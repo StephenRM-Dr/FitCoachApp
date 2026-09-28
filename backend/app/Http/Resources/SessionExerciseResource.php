@@ -16,6 +16,8 @@ class SessionExerciseResource extends JsonResource
             'order' => $this->order,
             'target_sets' => $this->target_sets,
             'target_reps' => $this->target_reps,
+            'target_weights' => $this->target_weights,
+            'weight_unit' => $this->weight_unit ?? 'kg',
             'target_rpe' => $this->target_rpe,
             'rest_time_seconds' => $this->rest_time_seconds,
             'exercise' => new ExerciseResource($this->whenLoaded('exercise')),

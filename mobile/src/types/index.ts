@@ -1,5 +1,7 @@
 export interface Exercise {
   id: number;
+  /** null = catálogo global; con valor = ejercicio propio de ese coach. */
+  coach_id: number | null;
   name: string;
   muscle_group: string;
   description: string | null;
@@ -29,6 +31,15 @@ export const DAY_OF_WEEK_LABELS: Record<DayOfWeek, string> = {
   domingo: "Domingo",
 };
 
+export type WeightUnit = "kg" | "lb";
+
+/** "60 / 65 / 70 kg" — null si no hay pesos cargados. */
+export const formatTargetWeights = (
+  weights: number[] | null | undefined,
+  unit: WeightUnit | null | undefined,
+): string | null =>
+  weights?.length ? `${weights.join(" / ")} ${unit ?? "kg"}` : null;
+
 export interface SessionExercise {
   id: number;
   workout_session_id: number;
@@ -36,6 +47,9 @@ export interface SessionExercise {
   order: number;
   target_sets: number | null;
   target_reps: number | null;
+  /** Hasta 3 pesos aproximados, en weight_unit. */
+  target_weights: number[] | null;
+  weight_unit: WeightUnit;
   target_rpe: number | null;
   rest_time_seconds: number | null;
   exercise?: Exercise;
