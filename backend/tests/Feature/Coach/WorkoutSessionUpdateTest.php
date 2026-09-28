@@ -120,4 +120,62 @@ class WorkoutSessionUpdateTest extends TestCase
 
         $response->assertStatus(422);
     }
+
+    private function payload(Exercise $exercise, ?string $day, string $name = 'Otra sesión'): array
+    {
+        return [
+            'name' => $name,
+            'day_of_week' => $day,
+            'exercises' => [['exercise_id' => $exercise->id, 'target_sets' => 3, 'target_reps' => 10]],
+        ];
+    }
+
+    public function test_cannot_create_a_second_session_on_a_day_that_already_has_one(): void
+    {
+        [$coach, $session, $exercise] = $this->sessionWithOneExercise(); // ya hay una el lunes
+
+        $this->actingAs($coach, 'sanctum')
+            ->postJson("/api/v1/coach/microcycles/{$session->microcycle_id}/sessions", $this->payload($exercise, 'lunes'))
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['day_of_week']);
+
+        $this->assertSame(1, WorkoutSession::where('microcycle_id', $session->microcycle_id)->count());
+    }
+
+    public function test_can_create_sessions_on_free_days_other_weeks_and_without_a_day(): void
+    {
+        [$coach, $session, $exercise] = $this->sessionWithOneExercise();
+        $url = "/api/v1/coach/microcycles/{$session->microcycle_id}/sessions";
+
+        $this->actingAs($coach, 'sanctum')->postJson($url, $this->payload($exercise, 'martes'))->assertCreated();
+        $this->actingAs($coach, 'sanctum')->postJson($url, $this->payload($exercise, null, 'Flexible 1'))->assertCreated();
+        $this->actingAs($coach, 'sanctum')->postJson($url, $this->payload($exercise, null, 'Flexible 2'))->assertCreated();
+
+        $nextWeek = Microcycle::create([
+            'mesocycle_id' => $session->microcycle->mesocycle_id,
+            'week_number' => 2,
+        ]);
+        $this->actingAs($coach, 'sanctum')
+            ->postJson("/api/v1/coach/microcycles/{$nextWeek->id}/sessions", $this->payload($exercise, 'lunes'))
+            ->assertCreated();
+    }
+
+    public function test_cannot_move_a_session_onto_an_occupied_day_but_can_keep_its_own(): void
+    {
+        [$coach, $session, $exercise] = $this->sessionWithOneExercise(); // lunes
+        $other = WorkoutSession::create([
+            'microcycle_id' => $session->microcycle_id,
+            'name' => 'Día 2',
+            'day_of_week' => 'martes',
+        ]);
+
+        $this->actingAs($coach, 'sanctum')
+            ->putJson("/api/v1/coach/sessions/{$other->id}", $this->payload($exercise, 'lunes'))
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['day_of_week']);
+
+        $this->actingAs($coach, 'sanctum')
+            ->putJson("/api/v1/coach/sessions/{$other->id}", $this->payload($exercise, 'martes', 'Renombrada'))
+            ->assertOk();
+    }
 }

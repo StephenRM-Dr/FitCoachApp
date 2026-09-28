@@ -9,6 +9,7 @@ use App\Models\WorkoutSession;
 use App\Models\Microcycle;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 use App\Http\Requests\Api\Coach\StoreWorkoutSessionRequest;
 
@@ -28,6 +29,8 @@ class WorkoutSessionController extends Controller
              return response()->json(['message' => 'Unauthorized'], 403);
         }
         
+        $this->ensureDayIsFree($microcycle->id, $validated['day_of_week'] ?? null);
+
         $session = DB::transaction(function () use ($validated, $microcycle) {
             $session = WorkoutSession::create([
                 'microcycle_id' => $microcycle->id,
@@ -84,6 +87,8 @@ class WorkoutSessionController extends Controller
             return response()->json(['message' => 'No tienes acceso a esta sesión.'], 403);
         }
 
+        $this->ensureDayIsFree($session->microcycle_id, $validated['day_of_week'] ?? null, $session->id);
+
         $session = DB::transaction(function () use ($validated, $session) {
             $session->update([
                 'name' => $validated['name'],
@@ -106,5 +111,29 @@ class WorkoutSessionController extends Controller
         });
 
         return new WorkoutSessionResource($session);
+    }
+
+    /**
+     * Una semana admite una sola sesión por día: el plan semanal del coach y
+     * la vista del asesorado se organizan por día, y una segunda sesión el
+     * mismo día quedaba oculta para el coach pero visible para el asesorado.
+     * Las sesiones sin día (flexibles) no tienen límite.
+     */
+    private function ensureDayIsFree(int $microcycleId, ?string $day, ?int $exceptSessionId = null): void
+    {
+        if ($day === null) {
+            return;
+        }
+
+        $taken = WorkoutSession::where('microcycle_id', $microcycleId)
+            ->where('day_of_week', $day)
+            ->when($exceptSessionId, fn ($q) => $q->where('id', '!=', $exceptSessionId))
+            ->exists();
+
+        if ($taken) {
+            throw ValidationException::withMessages([
+                'day_of_week' => ['Ya hay una sesión planificada para ese día. Edítala en lugar de crear otra.'],
+            ]);
+        }
     }
 }

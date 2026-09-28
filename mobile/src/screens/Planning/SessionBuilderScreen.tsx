@@ -86,9 +86,15 @@ export function SessionBuilderScreen({ route, navigation }: any) {
   }
 
   const createSessionMutation = useMutation({
-    mutationFn: (data: any) => coachService.createSession(microcycleId, data),
+    mutationFn: (data: any) =>
+      coachService.createSession(microcycleId as number, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["client-programs"] });
+      // PlanningScreen arma la semana desde estas consultas: sin refrescarlas
+      // el día seguía viéndose vacío, el coach volvía a tocarlo y se creaba
+      // otra sesión el mismo día (duplicadas) en vez de abrir la existente.
+      queryClient.invalidateQueries({ queryKey: ["weekly-plan"] });
+      queryClient.invalidateQueries({ queryKey: ["microcycle-week"] });
       Alert.alert("Éxito", "Sesión creada correctamente");
       navigation.goBack();
     },
@@ -99,7 +105,8 @@ export function SessionBuilderScreen({ route, navigation }: any) {
       );
       Alert.alert(
         "Error",
-        "No se pudo crear la sesión. Revisa los datos e intenta de nuevo.",
+        error.response?.data?.errors?.day_of_week?.[0] ||
+          "No se pudo crear la sesión. Revisa los datos e intenta de nuevo.",
       );
     },
   });
@@ -124,7 +131,8 @@ export function SessionBuilderScreen({ route, navigation }: any) {
       );
       Alert.alert(
         "Error",
-        "No se pudo actualizar la sesión. Revisa los datos e intenta de nuevo.",
+        error.response?.data?.errors?.day_of_week?.[0] ||
+          "No se pudo actualizar la sesión. Revisa los datos e intenta de nuevo.",
       );
     },
   });
