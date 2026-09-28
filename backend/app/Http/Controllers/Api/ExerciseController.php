@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\ExerciseResource;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 
 use App\Models\Exercise;
@@ -37,7 +38,22 @@ class ExerciseController extends Controller
         // absoluta: la URL final se arma en ExerciseResource a partir del
         // host de cada request, para que funcione igual detrás de un túnel
         // (ngrok/IP LAN) cuyo host no coincide con el APP_URL del backend.
-        $exercise->image_url = Storage::disk(config('fitcoach.media_disk'))->putFile('exercises', $request->file('image'));
+        $path = Storage::disk(config('fitcoach.media_disk'))->putFile('exercises', $request->file('image'));
+
+        // Los discos remotos (R2/S3) usan throw=false: ante un fallo (SSL,
+        // credenciales, bucket) putFile devuelve false en vez de lanzar. Sin
+        // esta comprobación se guardaba image_url=false y la API respondía
+        // 200 con la imagen vacía, ocultando el error.
+        if ($path === false) {
+            Log::error('No se pudo guardar la imagen del ejercicio', [
+                'exercise_id' => $exercise->id,
+                'disk' => config('fitcoach.media_disk'),
+            ]);
+
+            return response()->json(['message' => 'No se pudo guardar la imagen. Intenta de nuevo.'], 500);
+        }
+
+        $exercise->image_url = $path;
         $exercise->save();
 
         return new ExerciseResource($exercise);

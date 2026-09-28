@@ -76,4 +76,27 @@ class ExerciseMediaTest extends TestCase
 
         $response->assertStatus(422);
     }
+
+    public function test_upload_fails_loudly_when_the_disk_cannot_store_the_file(): void
+    {
+        // Un disco remoto con throw=false devuelve false en vez de lanzar
+        // (certificado SSL, credenciales, bucket): eso NO debe responder 200
+        // con image_url nulo, ni tocar la imagen que ya tenía el ejercicio.
+        $failingDisk = \Mockery::mock();
+        $failingDisk->shouldReceive('putFile')->once()->andReturn(false);
+        Storage::shouldReceive('disk')->with('public')->andReturn($failingDisk);
+
+        $coach = User::factory()->create(['role' => 'coach']);
+        $exercise = Exercise::create(['name' => 'Sentadilla', 'muscle_group' => 'piernas']);
+        $exercise->image_url = 'exercises/previa.png';
+        $exercise->save();
+
+        $response = $this->actingAs($coach, 'sanctum')->postJson(
+            "/api/v1/coach/exercises/{$exercise->id}/media",
+            ['image' => UploadedFile::fake()->image('nueva.png')],
+        );
+
+        $response->assertStatus(500)->assertJsonPath('message', 'No se pudo guardar la imagen. Intenta de nuevo.');
+        $this->assertSame('exercises/previa.png', $exercise->fresh()->image_url);
+    }
 }

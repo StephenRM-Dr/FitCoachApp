@@ -42,5 +42,8 @@ En `mobile/.env`: `EXPO_PUBLIC_API_URL=https://<tu-dominio>/api/v1` y reconstruy
 ## Neon (escala a cero)
 La primera petición tras inactividad tarda ~1 s más mientras la base "despierta". Para demo es aceptable; con usuarios reales desactiva *scale to zero* en el proyecto de Neon.
 
+## Problemas conocidos
+- **Local en Windows: la subida de imagen falla o la imagen queda vacía.** Si el log dice `cURL error 60: SSL certificate problem`, tu PHP no tiene un bundle de CA. Define `R2_CA_BUNDLE=C:/laragon/etc/ssl/cacert.pem` en `backend/.env` (o `curl.cainfo` y `openssl.cafile` en `php.ini`) y reinicia `php artisan serve`. En Railway (Linux) no hace falta.
+
 ## Sin verificar
 El `Dockerfile` no se ha construido ni ejecutado (Docker no está instalado en la máquina de desarrollo) y R2 solo se probó con un disco simulado. Revisa los logs de build y del primer arranque en Railway antes de reconstruir el APK.

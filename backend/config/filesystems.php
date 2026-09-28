@@ -72,6 +72,10 @@ return [
             'url' => env('R2_PUBLIC_URL'),
             'endpoint' => env('R2_ENDPOINT'),
             'use_path_style_endpoint' => true,
+            // Solo para PHP en Windows sin bundle de CA en php.ini (error cURL 60):
+            // apunta a un cacert.pem, p. ej. C:/laragon/etc/ssl/cacert.pem.
+            // En Linux/Docker (Railway) no hace falta y se deja sin definir.
+            'http' => array_filter(['verify' => env('R2_CA_BUNDLE')]),
             'throw' => false,
             'report' => false,
         ],
