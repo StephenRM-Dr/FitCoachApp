@@ -7,6 +7,13 @@ use Knuckles\Scribe\Extracting\Strategies;
 use function Knuckles\Scribe\Config\configureStrategy;
 use function Knuckles\Scribe\Config\removeStrategies;
 
+// Scribe es una dependencia de desarrollo (require-dev): en producción
+// (composer install --no-dev) no está instalada y este archivo, que usa sus
+// clases, hacía fallar TODO artisan/arranque con «Class Defaults not found».
+if (! class_exists(Defaults::class)) {
+    return [];
+}
+
 // Only the most common configs are shown. See the https://scribe.knuckles.wtf/laravel/reference/config for all.
 
 return [

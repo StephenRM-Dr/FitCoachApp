@@ -13,3 +13,4 @@ public/vendor/scribe
 tests
 .phpunit.cache
 *.log
+bootstrap/cache/*.php
