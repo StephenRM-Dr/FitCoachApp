@@ -31,6 +31,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { workoutService } from "../../services/workoutService";
 import { Colors, Spacing, BorderRadius, Typography } from "../../theme";
 import { Program, WorkoutSession, DAY_OF_WEEK_LABELS } from "../../types";
+import { buildWeekPlan, dayOfWeekFor } from "../../utils/weekPlan";
 
 export const WorkoutScreen = () => {
   const queryClient = useQueryClient();
@@ -148,6 +149,30 @@ export const WorkoutScreen = () => {
     },
   });
 
+  const currentWeek = activeProgram?.mesocycles?.[0]?.microcycles?.[0];
+  const weekPlan = buildWeekPlan(
+    currentWeek?.workout_sessions ?? [],
+    dayOfWeekFor(new Date()),
+  );
+
+  const renderSessionCard = (session: WorkoutSession) => (
+    <TouchableOpacity
+      key={session.id}
+      style={styles.sessionSelectCard}
+      onPress={() => setSelectedSessionId(session.id)}
+      accessibilityRole="button"
+      accessibilityLabel={`Comenzar ${session.name}`}
+    >
+      <View style={{ flex: 1 }}>
+        <Text style={styles.sessionSelectTitle}>{session.name}</Text>
+        <Text style={Typography.caption}>
+          {session.session_exercises?.length || 0} ejercicios
+        </Text>
+      </View>
+      <Play size={20} color={Colors.primary} />
+    </TouchableOpacity>
+  );
+
   if (loadingProgram) {
     return (
       <View style={[styles.container, styles.center]}>
@@ -199,33 +224,49 @@ export const WorkoutScreen = () => {
           </Text>
         </View>
 
-        {/* Selector de Sesión */}
+        {/* Selector de Sesión: la semana completa, con el día de hoy resaltado */}
         {!selectedSessionId ? (
           <View>
-            <Text style={[Typography.h5, { marginBottom: Spacing.md }]}>
-              Selecciona tu sesión de hoy:
-            </Text>
-            {activeProgram.mesocycles?.[0]?.microcycles?.[0]?.workout_sessions?.map(
-              (session) => (
-                <TouchableOpacity
-                  key={session.id}
-                  style={styles.sessionSelectCard}
-                  onPress={() => setSelectedSessionId(session.id)}
-                >
-                  <View>
-                    <Text style={styles.sessionSelectTitle}>
-                      {session.name}
-                    </Text>
-                    <Text style={Typography.caption}>
-                      {(session.day_of_week &&
-                        DAY_OF_WEEK_LABELS[session.day_of_week]) ||
-                        "Día flexible"}{" "}
-                      • {session.session_exercises?.length || 0} ejercicios
-                    </Text>
-                  </View>
-                  <Play size={20} color={Colors.primary} />
-                </TouchableOpacity>
-              ),
+            <Text style={Typography.h5}>Tu semana de entrenamiento</Text>
+            {!!currentWeek?.week_number && (
+              <Text style={[Typography.caption, { marginBottom: Spacing.md }]}>
+                Semana {currentWeek.week_number} · Toca una sesión para comenzar
+              </Text>
+            )}
+
+            {weekPlan.days.map(({ day, isToday, sessions }) => (
+              <View
+                key={day}
+                style={[styles.dayBlock, isToday && styles.dayBlockToday]}
+              >
+                <View style={styles.dayHeader}>
+                  <Text
+                    style={[styles.dayName, isToday && styles.dayNameToday]}
+                  >
+                    {DAY_OF_WEEK_LABELS[day]}
+                  </Text>
+                  {isToday && (
+                    <View style={styles.todayBadge}>
+                      <Text style={styles.todayBadgeText}>HOY</Text>
+                    </View>
+                  )}
+                </View>
+
+                {sessions.length === 0 ? (
+                  <Text style={styles.restDayText}>Descanso</Text>
+                ) : (
+                  sessions.map((session) => renderSessionCard(session))
+                )}
+              </View>
+            ))}
+
+            {weekPlan.unscheduled.length > 0 && (
+              <View style={styles.dayBlock}>
+                <Text style={styles.dayName}>Sin día asignado</Text>
+                {weekPlan.unscheduled.map((session) =>
+                  renderSessionCard(session),
+                )}
+              </View>
             )}
           </View>
         ) : loadingSession ? (
@@ -581,6 +622,38 @@ const styles = StyleSheet.create({
     borderLeftWidth: 4,
     borderLeftColor: Colors.primary,
   },
+  dayBlock: {
+    marginBottom: Spacing.md,
+    padding: Spacing.md,
+    borderRadius: BorderRadius.lg,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  dayBlockToday: {
+    borderColor: Colors.primary,
+    backgroundColor: Colors.primary + "14",
+  },
+  dayHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.sm,
+    marginBottom: Spacing.sm,
+  },
+  dayName: {
+    color: Colors.textSecondary,
+    fontSize: 14,
+    fontWeight: "700",
+    textTransform: "uppercase",
+  },
+  dayNameToday: { color: Colors.white },
+  todayBadge: {
+    backgroundColor: Colors.primaryDark,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 2,
+    borderRadius: BorderRadius.sm,
+  },
+  todayBadgeText: { color: Colors.white, fontSize: 11, fontWeight: "800" },
+  restDayText: { color: Colors.textMuted, fontSize: 14 },
   sessionSelectTitle: {
     color: Colors.white,
     fontSize: 16,
