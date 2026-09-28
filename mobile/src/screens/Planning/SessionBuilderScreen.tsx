@@ -141,8 +141,20 @@ export function SessionBuilderScreen({ route, navigation }: any) {
       exerciseId: number;
       asset: { uri: string; name: string; type: string };
     }) => coachService.uploadExerciseMedia(exerciseId, asset),
-    onSuccess: () => {
+    onSuccess: (updatedExercise) => {
+      // El catálogo es compartido entre coaches: refresca la lista completa...
       queryClient.invalidateQueries({ queryKey: ["exercises"] });
+      // ...pero los ejercicios ya añadidos a esta sesión son una copia local
+      // (selectedExercises) hecha al momento de agregarlos: la invalidación
+      // de arriba no la toca, hay que actualizarla a mano o la tarjeta se
+      // queda con la miniatura vieja (o sin ninguna).
+      setSelectedExercises((current) =>
+        current.map((ex) =>
+          ex.exercise_id === updatedExercise.id
+            ? { ...ex, image_url: updatedExercise.image_url }
+            : ex,
+        ),
+      );
     },
     onError: () => {
       Alert.alert("Error", "No se pudo subir la imagen. Intenta de nuevo.");
@@ -302,11 +314,34 @@ export function SessionBuilderScreen({ route, navigation }: any) {
         {selectedExercises.map((ex, index) => (
           <View key={index} style={styles.exerciseCard}>
             <View style={styles.cardHeader}>
-              <Text style={[Typography.body, { fontWeight: "700", flex: 1 }]}>
+              {ex.image_url ? (
+                <Image
+                  source={{ uri: ex.image_url }}
+                  style={styles.exerciseThumbnailSmall}
+                />
+              ) : (
+                <TouchableOpacity
+                  style={styles.exerciseThumbnailPlaceholderSmall}
+                  onPress={() => pickAndUploadMedia(ex.exercise_id)}
+                  disabled={uploadingExerciseId === ex.exercise_id}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Subir imagen de referencia para ${ex.name}`}
+                >
+                  {uploadingExerciseId === ex.exercise_id ? (
+                    <ActivityIndicator size="small" color={Colors.primary} />
+                  ) : (
+                    <ImagePlus size={16} color={Colors.textMuted} />
+                  )}
+                </TouchableOpacity>
+              )}
+              <Text
+                style={[Typography.body, { fontWeight: "700", flex: 1 }]}
+                numberOfLines={1}
+              >
                 {ex.name}
               </Text>
               <TouchableOpacity onPress={() => removeExercise(index)}>
-                <Trash2 size={18} color={Colors.error} />
+                <Trash2 size={18} color={Colors.danger} />
               </TouchableOpacity>
             </View>
 
@@ -594,7 +629,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.border,
   },
-  cardHeader: { flexDirection: "row", marginBottom: Spacing.md },
+  cardHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: Spacing.md,
+  },
   paramsRow: { flexDirection: "row", gap: Spacing.md },
   paramGroup: { flex: 1 },
   paramLabel: {
@@ -687,6 +726,21 @@ const styles = StyleSheet.create({
   exerciseMainInfo: {
     flex: 1,
     gap: 4,
+  },
+  exerciseThumbnailSmall: {
+    width: 36,
+    height: 36,
+    borderRadius: BorderRadius.sm,
+    marginRight: Spacing.sm,
+  },
+  exerciseThumbnailPlaceholderSmall: {
+    width: 36,
+    height: 36,
+    borderRadius: BorderRadius.sm,
+    backgroundColor: Colors.bgElevated,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: Spacing.sm,
   },
   exerciseThumbnail: {
     width: 40,
