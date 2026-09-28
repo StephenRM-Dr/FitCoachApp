@@ -52,6 +52,8 @@ const Tab = createBottomTabNavigator();
  * (edge-to-edge es obligatorio desde Expo SDK 54, no se puede confiar en
  * que @react-navigation/bottom-tabs lo resuelva solo en todos los builds).
  */
+const TAB_CONTENT_HEIGHT = 56;
+
 function useTabScreenOptions() {
   const insets = useSafeAreaInsets();
   const bottomInset = Math.max(insets.bottom, 8);
@@ -68,7 +70,10 @@ function useTabScreenOptions() {
       borderTopWidth: 1,
       paddingTop: 8,
       paddingBottom: bottomInset,
-      height: 52 + bottomInset,
+      // Alto del contenido (icono + etiqueta) + padding superior + inset. Con
+      // 52 + inset el contenido quedaba en 44 px y cortaba las etiquetas,
+      // sobre todo con la navegación de 3 botones (inset inferior = 0).
+      height: TAB_CONTENT_HEIGHT + 8 + bottomInset,
     },
     tabBarLabelStyle: { fontSize: 11, fontWeight: "600" as const },
   };
