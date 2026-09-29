@@ -21,7 +21,8 @@ export interface LegalDocument {
   sections: LegalSection[];
 }
 
-const controller = `${BUSINESS.legalName} (${BUSINESS.taxId}), con domicilio en ${BUSINESS.address}, ${BUSINESS.country}.`;
+// Persona natural: el emprendimiento aún no tiene personería jurídica.
+const controller = `${BUSINESS.ownerName}, persona natural (${BUSINESS.idDocument}) con domicilio en ${BUSINESS.city}, ${BUSINESS.country}, quien opera ${BUSINESS.appName} como emprendimiento en fase inicial, sin personería jurídica registrada.`;
 
 export const PRIVACY_POLICY: LegalDocument = {
   id: "privacy",
@@ -66,17 +67,18 @@ export const PRIVACY_POLICY: LegalDocument = {
     {
       heading: "5. Terceros y transferencias internacionales",
       body: [
-        "Base de datos: Neon (PostgreSQL alojado en la nube). Almacena todos los datos descritos arriba. Región de alojamiento: [COMPLETAR].",
-        "Envío de correo (código de recuperación de contraseña): proveedor de correo [COMPLETAR]. Recibe tu correo electrónico y el código.",
-        "Alojamiento del servidor de la API: [COMPLETAR].",
-        "Estos proveedores pueden estar en países distintos al tuyo. Trátalo como una transferencia internacional de datos.",
+        "Base de datos: Neon (PostgreSQL alojado en la nube). Almacena todos los datos descritos arriba. Región de alojamiento: Estados Unidos (AWS us-east-2, Ohio).",
+        "Alojamiento del servidor de la API: Railway (Railway Corp., Estados Unidos). Procesa las solicitudes de la app; no guarda tus datos de forma permanente.",
+        "Almacenamiento de imágenes: Cloudflare R2 (Cloudflare, Inc., Estados Unidos). Guarda las imágenes y GIF de referencia de ejercicios que suben los coaches; no contiene tus datos personales.",
+        "Estos proveedores están en Estados Unidos: al usar la app, tus datos se transfieren y se almacenan allí, aunque vivas en otro país.",
+        "Cuando la ley de tu país lo exija (por ejemplo, el Reglamento General de Protección de Datos de la Unión Europea), esas transferencias se amparan en garantías adecuadas, como las cláusulas contractuales tipo aprobadas por la Comisión Europea incluidas en los acuerdos de tratamiento de datos con los proveedores.",
       ],
     },
     {
       heading: "6. Conservación",
       body: [
         "Conservamos tus datos mientras tu cuenta esté activa. Si eliminas tu cuenta desde la app (Perfil → Seguridad → Eliminar cuenta), se borran tu cuenta y tus datos asociados de forma definitiva.",
-        "Copias de seguridad del proveedor de base de datos: pueden conservarse hasta [COMPLETAR: plazo] antes de purgarse.",
+        "Copias de seguridad del proveedor de base de datos: tras eliminar tu cuenta, tus datos pueden permanecer en ellas hasta 30 días antes de purgarse de forma automática.",
       ],
     },
     {
@@ -84,24 +86,40 @@ export const PRIVACY_POLICY: LegalDocument = {
       body: [
         "Puedes acceder, rectificar y actualizar tus datos desde Perfil → Información Personal.",
         "Puedes eliminar tu cuenta y tus datos desde Perfil → Seguridad → Eliminar cuenta.",
-        `Para solicitar una copia de tus datos, oponerte a un tratamiento o retirar tu consentimiento, escribe a ${BUSINESS.privacyEmail}.`,
-        "Si consideras que no atendimos tu solicitud, puedes acudir a la autoridad de protección de datos de tu país: [COMPLETAR según jurisdicción].",
+        `Para pedir una copia de tus datos en un formato estructurado y de uso común (portabilidad), limitar u oponerte a un tratamiento o retirar tu consentimiento, escribe a ${BUSINESS.privacyEmail}. Retirar el consentimiento no afecta al tratamiento hecho antes.`,
+        "Respondemos en un plazo máximo de 10 días hábiles. Si necesitamos más tiempo, te diremos el motivo y la nueva fecha, que nunca superará el plazo que fije la ley de tu país.",
+        "No tomamos decisiones automatizadas ni elaboramos perfiles que produzcan efectos jurídicos sobre ti.",
+        "Estos derechos están reconocidos en los artículos 28 (habeas data) y 60 (protección de la vida privada) de la Constitución de la República Bolivariana de Venezuela. En Venezuela no existe una autoridad administrativa específica de protección de datos: si consideras que no atendimos tu solicitud, puedes ejercerlos ante los tribunales competentes mediante la acción de habeas data.",
       ],
     },
     {
-      heading: "8. Seguridad",
+      heading: "8. Si vives fuera de Venezuela",
+      body: [
+        "Además de lo anterior, tienes los derechos que te reconozca la ley de protección de datos de tu país, y puedes reclamar ante su autoridad. Por ejemplo:",
+        "Unión Europea / Espacio Económico Europeo y Reino Unido (RGPD / UK GDPR): derechos de acceso, rectificación, supresión, limitación, portabilidad y oposición; reclamación ante la autoridad de control de tu país (en el Reino Unido, la ICO).",
+        "Brasil (LGPD, Ley 13.709/2018): reclamación ante la Autoridade Nacional de Proteção de Dados (ANPD).",
+        "Colombia (Ley 1581 de 2012): reclamación ante la Superintendencia de Industria y Comercio (SIC).",
+        "México (Ley Federal de Protección de Datos Personales en Posesión de los Particulares, 2025): derechos ARCO ante nosotros y, si no te atendemos, ante la Secretaría Anticorrupción y Buen Gobierno.",
+        "Argentina (Ley 25.326): reclamación ante la Agencia de Acceso a la Información Pública (AAIP).",
+        "Chile (Ley 21.719, vigente desde el 1 de diciembre de 2026): reclamación ante la Agencia de Protección de Datos Personales.",
+        "Perú (Ley 29733): reclamación ante la Autoridad Nacional de Protección de Datos Personales.",
+        "California, EE. UU. (CCPA/CPRA): no vendemos ni compartimos tus datos personales con fines publicitarios, y no te discriminaremos por ejercer tus derechos.",
+      ],
+    },
+    {
+      heading: "9. Seguridad",
       body: [
         "Las comunicaciones con el servidor viajan cifradas (HTTPS) en producción, las contraseñas se guardan con hash y el token de sesión se almacena en el almacén seguro del dispositivo. Ningún sistema es 100 % infalible; si detectamos una brecha que te afecte, te lo notificaremos.",
       ],
     },
     {
-      heading: "9. Menores de edad",
+      heading: "10. Menores de edad",
       body: [
         "La app está dirigida a personas de 18 años o más. No recopilamos datos de menores de forma intencional; si crees que un menor se registró, escríbenos para eliminar la cuenta.",
       ],
     },
     {
-      heading: "10. Cambios a esta política",
+      heading: "11. Cambios a esta política",
       body: [
         "Si modificamos esta política de forma relevante, te lo informaremos en la app y, cuando corresponda, volveremos a pedir tu aceptación. La versión vigente y su fecha se indican en la parte superior.",
       ],
@@ -144,7 +162,7 @@ export const TERMS_OF_USE: LegalDocument = {
     {
       heading: "5. Propiedad intelectual",
       body: [
-        `La app, su diseño y su código pertenecen a ${BUSINESS.legalName}. Tus datos siguen siendo tuyos; nos autorizas a tratarlos únicamente para prestarte el servicio según la Política de Privacidad.`,
+        `La app, su diseño y su código pertenecen a ${BUSINESS.ownerName}. Tus datos siguen siendo tuyos; nos autorizas a tratarlos únicamente para prestarte el servicio según la Política de Privacidad.`,
       ],
     },
     {
@@ -162,7 +180,8 @@ export const TERMS_OF_USE: LegalDocument = {
     {
       heading: "8. Ley aplicable",
       body: [
-        "Estos términos se rigen por las leyes de [COMPLETAR: país/jurisdicción], sin perjuicio de las normas imperativas de protección al consumidor de tu país de residencia.",
+        `Estos términos se rigen por las leyes de la República Bolivariana de Venezuela. Cualquier controversia se someterá a los tribunales competentes de ${BUSINESS.city}.`,
+        "Si usas la app como consumidor desde otro país, esta elección de ley y de tribunales no te priva de la protección de las normas imperativas de tu país de residencia, y puedes acudir a sus tribunales cuando esa ley lo permita.",
       ],
     },
     {
