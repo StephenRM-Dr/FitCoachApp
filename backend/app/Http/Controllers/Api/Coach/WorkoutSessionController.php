@@ -35,7 +35,7 @@ class WorkoutSessionController extends Controller
             $session = WorkoutSession::create([
                 'microcycle_id' => $microcycle->id,
                 'name' => $validated['name'],
-                'day_of_week' => $validated['day_of_week'],
+                'day_of_week' => $validated['day_of_week'] ?? null,
             ]);
             
             $session->sessionExercises()->createMany(
@@ -85,7 +85,7 @@ class WorkoutSessionController extends Controller
         $session = DB::transaction(function () use ($validated, $session) {
             $session->update([
                 'name' => $validated['name'],
-                'day_of_week' => $validated['day_of_week'],
+                'day_of_week' => $validated['day_of_week'] ?? null,
             ]);
 
             $session->sessionExercises()->delete();
