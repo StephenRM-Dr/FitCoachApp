@@ -45,8 +45,15 @@ class ProgramController extends Controller
     {
         $this->authorizeCoachOwnsClient($request, (int) $clientId);
 
+        // Solo la estructura y el número de ejercicios por sesión: el árbol
+        // completo con cada ejercicio crecía con cada semana planificada, y el
+        // detalle de una sesión se pide aparte (coach/sessions/{id}).
         $programs = Program::where('client_id', $clientId)
-            ->with('mesocycles.microcycles.workoutSessions.sessionExercises.exercise')
+            ->with([
+                'mesocycles' => fn ($q) => $q->orderBy('start_week'),
+                'mesocycles.microcycles' => fn ($q) => $q->orderBy('week_number'),
+                'mesocycles.microcycles.workoutSessions' => fn ($q) => $q->withCount('sessionExercises'),
+            ])
             ->get();
 
         return ProgramResource::collection($programs);

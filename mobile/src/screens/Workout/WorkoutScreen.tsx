@@ -62,7 +62,16 @@ export const WorkoutScreen = () => {
     queryFn: () => workoutService.getActiveProgram(),
   });
 
-  // 2. Obtener detalles de la sesión seleccionada
+  // 2. Obtener detalles de la sesión seleccionada. El programa activo ya trae
+  // cada sesión con sus ejercicios: se usa como dato inicial para abrirla al
+  // instante, y solo se vuelve a pedir si ese dato ya está viejo.
+  const sessionFromProgram = selectedSessionId
+    ? activeProgram?.mesocycles
+        ?.flatMap((meso) => meso.microcycles ?? [])
+        .flatMap((micro) => micro.workout_sessions ?? [])
+        .find((session) => session.id === selectedSessionId)
+    : undefined;
+
   const { data: sessionDetails, isLoading: loadingSession } = useQuery({
     queryKey: ["session-details", selectedSessionId],
     queryFn: () =>
@@ -70,6 +79,11 @@ export const WorkoutScreen = () => {
         ? workoutService.getSessionDetails(selectedSessionId)
         : Promise.resolve(null),
     enabled: !!selectedSessionId,
+    initialData: sessionFromProgram?.session_exercises
+      ? sessionFromProgram
+      : undefined,
+    initialDataUpdatedAt: () =>
+      queryClient.getQueryState(["active-program"])?.dataUpdatedAt,
   });
 
   // Inicializar series cuando se carga la sesión

@@ -61,6 +61,8 @@ export interface WorkoutSession {
   name: string;
   day_of_week: DayOfWeek | null;
   session_exercises?: SessionExercise[];
+  /** Solo en listados (coach/clients/{id}/programs), en vez de session_exercises. */
+  session_exercises_count?: number;
 }
 
 export interface Microcycle {

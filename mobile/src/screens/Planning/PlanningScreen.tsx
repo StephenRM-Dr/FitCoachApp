@@ -112,7 +112,12 @@ export function PlanningScreen() {
     const existing = sessionsByDay.get(day);
     if (existing) {
       // Sesión ya guardada: entra en modo edición para poder
-      // añadir/quitar ejercicios cuando quiera, no solo verla.
+      // añadir/quitar ejercicios cuando quiera, no solo verla. El plan
+      // semanal ya trae la sesión con sus ejercicios: se deja en la caché
+      // para que el constructor abra sin esperar otra petición.
+      if (existing.session_exercises) {
+        queryClient.setQueryData(["session-preview", existing.id], existing);
+      }
       navigation.navigate("SessionBuilder", { sessionId: existing.id });
     } else {
       navigation.navigate("SessionBuilder", {

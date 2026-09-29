@@ -17,14 +17,8 @@ import { useNavigation } from "@react-navigation/native";
 import { useAuthStore } from "../../store/authStore";
 import { profileService } from "../../services/profileService";
 import { ActivityLevel } from "../../services/anamnesisService";
+import { ACTIVITY_LEVELS } from "../../utils/energy";
 import { Colors, Spacing, BorderRadius, Typography } from "../../theme";
-
-const ACTIVITY_LEVELS: { value: ActivityLevel; label: string }[] = [
-  { value: "sedentario", label: "Sedentario" },
-  { value: "ligero", label: "Ligero" },
-  { value: "activo", label: "Activo" },
-  { value: "muy_activo", label: "Muy Activo" },
-];
 
 export function PersonalInfoScreen() {
   const navigation = useNavigation<any>();
