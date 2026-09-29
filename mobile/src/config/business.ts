@@ -2,21 +2,24 @@
  * Datos del responsable del servicio — fuente única para las pantallas
  * legales, Ayuda y Soporte y el pie de la app.
  *
- * Todo lo marcado [COMPLETAR] debe ser rellenado por el titular antes de
- * publicar la app: no inventamos razón social, identificación fiscal ni
- * direcciones.
+ * FitCoach Pro es un emprendimiento venezolano en fase inicial, sin
+ * personería jurídica registrada: el responsable es la persona natural que
+ * lo opera. Cuando se constituya una empresa (C.A., F.P., etc.), cambiar
+ * `ownerName`/`idDocument` por la razón social y el RIF jurídico y subir
+ * LEGAL_VERSION.
+ *
+ * Si cambia algún dato del titular, sube LEGAL_VERSION.
  */
 export const BUSINESS = {
   appName: "FitCoach Pro",
-  legalName: "[COMPLETAR: razón social o nombre completo del titular]",
-  taxId: "[COMPLETAR: RIF / NIT / identificación fiscal]",
-  address: "[COMPLETAR: dirección postal]",
-  country: "[COMPLETAR: país del titular]",
-  contactEmail: "[COMPLETAR: correo de soporte]",
-  privacyEmail: "[COMPLETAR: correo para solicitudes de privacidad]",
-  phone: "[COMPLETAR: teléfono de contacto, opcional]",
+  ownerName: "Steven Rincón Medina",
+  idDocument: "RIF V-25167398-0",
+  city: "San Cristóbal, estado Táchira",
+  country: "Venezuela",
+  contactEmail: "rincondigitalnet0@gmail.com",
+  privacyEmail: "rincondigitalnet0@gmail.com",
 } as const;
 
 /** Debe coincidir con backend/config/fitcoach.php → legal_version. */
-export const LEGAL_VERSION = "1.0";
-export const LEGAL_LAST_UPDATED = "26 de septiembre de 2026";
+export const LEGAL_VERSION = "1.1";
+export const LEGAL_LAST_UPDATED = "29 de septiembre de 2026";
