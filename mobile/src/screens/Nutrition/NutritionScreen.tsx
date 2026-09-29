@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React from "react";
 import {
   View,
   Text,
@@ -17,7 +17,6 @@ import {
   Lock,
 } from "lucide-react-native";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useNutritionStore } from "../../store/nutritionStore";
 import { useAuthStore } from "../../store/authStore";
 import {
   nutritionService,
@@ -26,6 +25,7 @@ import {
 import { progressService } from "../../services/progressService";
 import { anamnesisService } from "../../services/anamnesisService";
 import { Colors, Spacing, BorderRadius, Typography } from "../../theme";
+import { calcMacroGrams, calcTDEE, calcTMB } from "../../utils/energy";
 
 const MACRO_COLORS = {
   protein: "#3b82f6",
@@ -64,7 +64,6 @@ function buildWeeklyAdherence(logs: NutritionLog[]) {
 }
 
 export const NutritionScreen = () => {
-  const { getIMC, getTMB, getTDEE, hydrate } = useNutritionStore();
   const authUser = useAuthStore((state) => state.user);
 
   const queryClient = useQueryClient();
@@ -103,17 +102,35 @@ export const NutritionScreen = () => {
     enabled: nutritionEnabled,
   });
 
-  useEffect(() => {
-    if (latestAnthro || anamnesisData?.profile || authUser?.gender) {
-      hydrate({
-        weight: latestAnthro?.weight,
-        height: latestAnthro?.height,
-        age: anamnesisData?.profile?.age,
-        activityLevel: anamnesisData?.profile?.activity_level,
-        gender: authUser?.gender,
-      });
-    }
-  }, [latestAnthro, anamnesisData, authUser, hydrate]);
+  // Sin valores por defecto: con un dato faltante se muestra qué falta en
+  // vez de calcular con un peso/estatura inventados.
+  const weight =
+    latestAnthro?.weight != null ? Number(latestAnthro.weight) : null;
+  const height =
+    latestAnthro?.height != null ? Number(latestAnthro.height) : null;
+  const age = anamnesisData?.profile?.age ?? null;
+  const activityLevel = anamnesisData?.profile?.activity_level ?? null;
+  const gender = authUser?.gender ?? null;
+
+  const missing = [
+    weight == null && "peso",
+    height == null && "estatura",
+    age == null && "edad",
+    activityLevel == null && "nivel de actividad",
+    gender == null && "sexo",
+  ].filter(Boolean) as string[];
+
+  const energyInput =
+    weight != null && height != null && age != null && gender != null
+      ? { weight, height, age, gender }
+      : null;
+  const imc =
+    weight != null && height != null
+      ? (weight / (height / 100) ** 2).toFixed(1)
+      : null;
+  const tmb = energyInput ? calcTMB(energyInput) : null;
+  const tdee =
+    energyInput && activityLevel ? calcTDEE(energyInput, activityLevel) : null;
 
   const weeklyAdherence = buildWeeklyAdherence(nutritionLogs);
 
@@ -181,9 +198,14 @@ export const NutritionScreen = () => {
     },
   ];
 
-  const imc = getIMC();
-  const tmb = getTMB();
-  const tdee = getTDEE();
+  const grams =
+    nutritionSettings && tdee != null
+      ? calcMacroGrams(tdee, {
+          protein: nutritionSettings.macro_protein_pct,
+          carbs: nutritionSettings.macro_carbs_pct,
+          fat: nutritionSettings.macro_fat_pct,
+        })
+      : null;
 
   const macroBreakdown = nutritionSettings
     ? [
@@ -191,25 +213,19 @@ export const NutritionScreen = () => {
           name: "Proteínas",
           value: nutritionSettings.macro_protein_pct,
           color: MACRO_COLORS.protein,
-          grams: Math.round(
-            (tdee * (nutritionSettings.macro_protein_pct / 100)) / 4,
-          ),
+          grams: grams?.protein,
         },
         {
           name: "Carbohidratos",
           value: nutritionSettings.macro_carbs_pct,
           color: MACRO_COLORS.carbs,
-          grams: Math.round(
-            (tdee * (nutritionSettings.macro_carbs_pct / 100)) / 4,
-          ),
+          grams: grams?.carbs,
         },
         {
           name: "Grasas",
           value: nutritionSettings.macro_fat_pct,
           color: MACRO_COLORS.fat,
-          grams: Math.round(
-            (tdee * (nutritionSettings.macro_fat_pct / 100)) / 9,
-          ),
+          grams: grams?.fat,
         },
       ]
     : [];
@@ -257,6 +273,15 @@ export const NutritionScreen = () => {
         </Text>
       </View>
 
+      {missing.length > 0 && (
+        <View style={[styles.card, styles.missingCard]}>
+          <Text style={[Typography.bodySmall, { color: Colors.warning }]}>
+            Falta {missing.join(", ")} para calcular tu gasto calórico. Pídeselo
+            a tu coach.
+          </Text>
+        </View>
+      )}
+
       {/* Requirement cards row */}
       <View style={styles.reqRow}>
         <View style={[styles.reqCard, { width: halfCardWidth }]}>
@@ -269,14 +294,14 @@ export const NutritionScreen = () => {
             <Calculator color={Colors.primary} size={20} />
           </View>
           <Text style={Typography.overline}>IMC</Text>
-          <Text style={styles.reqValue}>{imc}</Text>
+          <Text style={styles.reqValue}>{imc ?? "—"}</Text>
           <Text
             style={[
               Typography.caption,
               { color: Colors.success, fontWeight: "600" },
             ]}
           >
-            {getImcLabel(parseFloat(imc))}
+            {imc ? getImcLabel(parseFloat(imc)) : "Sin datos"}
           </Text>
         </View>
 
@@ -290,7 +315,7 @@ export const NutritionScreen = () => {
             <TrendingUp color={Colors.purple} size={20} />
           </View>
           <Text style={Typography.overline}>TMB</Text>
-          <Text style={styles.reqValue}>{tmb}</Text>
+          <Text style={styles.reqValue}>{tmb ?? "—"}</Text>
           <Text style={Typography.caption}>Cal/día basal</Text>
         </View>
       </View>
@@ -308,7 +333,9 @@ export const NutritionScreen = () => {
           </View>
           <View style={{ marginLeft: Spacing.md }}>
             <Text style={Typography.overline}>TDEE (GASTO TOTAL)</Text>
-            <Text style={[Typography.h3, { marginTop: 2 }]}>{tdee} kcal</Text>
+            <Text style={[Typography.h3, { marginTop: 2 }]}>
+              {tdee != null ? `${tdee} kcal` : "—"}
+            </Text>
           </View>
         </View>
       </View>
@@ -340,7 +367,7 @@ export const NutritionScreen = () => {
             <Text
               style={[Typography.body, { fontWeight: "700", fontSize: 14 }]}
             >
-              {macro.grams}g
+              {macro.grams != null ? `${macro.grams}g` : "—"}
             </Text>
           </View>
         ))}
@@ -496,6 +523,10 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.lg,
     padding: Spacing.base,
     marginBottom: Spacing.lg,
+  },
+  missingCard: {
+    borderWidth: 1,
+    borderColor: Colors.warning,
   },
   tdeeRow: {
     flexDirection: "row",

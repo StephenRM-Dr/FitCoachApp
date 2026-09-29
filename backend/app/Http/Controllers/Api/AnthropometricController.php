@@ -48,6 +48,17 @@ class AnthropometricController extends Controller
     {
         $userId = $this->getTargetUserId($request);
         $latest = Anthropometric::where('user_id', $userId)->orderBy('recorded_at', 'desc')->first();
+
+        // La estatura casi nunca cambia y muchos registros solo traen el peso:
+        // se completa con la última estatura conocida para que el cálculo de
+        // gasto calórico no quede sin dato.
+        if ($latest && $latest->height === null) {
+            $latest->height = Anthropometric::where('user_id', $userId)
+                ->whereNotNull('height')
+                ->orderBy('recorded_at', 'desc')
+                ->value('height');
+        }
+
         return response()->json($latest);
     }
 }

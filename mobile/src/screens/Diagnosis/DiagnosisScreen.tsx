@@ -21,19 +21,22 @@ import {
 import { progressService } from "../../services/progressService";
 import { nutritionService } from "../../services/nutritionService";
 import { Colors, Spacing, BorderRadius, Typography } from "../../theme";
+import {
+  ACTIVITY_FACTORS,
+  ACTIVITY_LEVELS,
+  calcMacroGrams,
+  calcTDEE,
+  calcTMB,
+} from "../../utils/energy";
 
-const ACTIVITY_LEVELS: { value: ActivityLevel; label: string }[] = [
-  { value: "sedentario", label: "Sedentario" },
-  { value: "ligero", label: "Ligero" },
-  { value: "activo", label: "Activo" },
-  { value: "muy_activo", label: "Muy Activo" },
-];
+const GENDER_LABELS = { male: "Hombre", female: "Mujer" } as const;
 
 export function DiagnosisScreen() {
   const [selectedClientId, setSelectedClientId] = useState<number | null>(null);
   const [isAssignModalVisible, setIsAssignModalVisible] = useState(false);
   const [age, setAge] = useState("");
   const [weight, setWeight] = useState("");
+  const [height, setHeight] = useState("");
   const [occupation, setOccupation] = useState("");
   const [activityLevel, setActivityLevel] = useState<ActivityLevel | "">("");
   const [mainObjective, setMainObjective] = useState("");
@@ -96,6 +99,7 @@ export function DiagnosisScreen() {
   useEffect(() => {
     setAge("");
     setWeight("");
+    setHeight("");
     setOccupation("");
     setActivityLevel("");
     setMainObjective("");
@@ -128,6 +132,9 @@ export function DiagnosisScreen() {
     if (latestAnthro?.weight != null) {
       setWeight(String(latestAnthro.weight));
     }
+    if (latestAnthro?.height != null) {
+      setHeight(String(latestAnthro.height));
+    }
   }, [latestAnthro]);
 
   // 5. Guardar diagnóstico (perfil + antropometría en paralelo)
@@ -147,15 +154,49 @@ export function DiagnosisScreen() {
   const saveAnthropometricMutation = useMutation({
     mutationFn: () =>
       progressService.saveAnthropometric(
-        { weight: weight ? parseFloat(weight) : null },
+        {
+          weight: weight ? parseFloat(weight) : null,
+          height: height ? parseFloat(height) : null,
+        },
         selectedClientId!,
       ),
   });
+
+  // Gasto calórico en vivo con lo que hay en el formulario (mismo cálculo que
+  // ve el asesorado en Nutrición). El sexo viene del registro del alumno.
+  const selectedClient = myClients.find((c) => c.id === selectedClientId);
+  const gender = selectedClient?.gender ?? null;
+  const ageNum = parseInt(age, 10);
+  const weightNum = parseFloat(weight);
+  const heightNum = parseFloat(height);
+  const missingForEnergy = [
+    !(weightNum > 0) && "peso",
+    !(heightNum > 0) && "estatura",
+    !(ageNum > 0) && "edad",
+    !activityLevel && "nivel de actividad",
+    !gender && "sexo (lo indica el alumno al registrarse)",
+  ].filter(Boolean) as string[];
+  const energyInput =
+    weightNum > 0 && heightNum > 0 && ageNum > 0 && gender
+      ? { weight: weightNum, height: heightNum, age: ageNum, gender }
+      : null;
+  const tmb = energyInput ? calcTMB(energyInput) : null;
+  const tdee =
+    energyInput && activityLevel ? calcTDEE(energyInput, activityLevel) : null;
 
   const macroSum =
     (parseInt(macroProtein, 10) || 0) +
     (parseInt(macroCarbs, 10) || 0) +
     (parseInt(macroFat, 10) || 0);
+
+  const macroGrams =
+    tdee != null
+      ? calcMacroGrams(tdee, {
+          protein: parseInt(macroProtein, 10) || 0,
+          carbs: parseInt(macroCarbs, 10) || 0,
+          fat: parseInt(macroFat, 10) || 0,
+        })
+      : null;
 
   const saveNutritionSettingsMutation = useMutation({
     mutationFn: () =>
@@ -202,7 +243,9 @@ export function DiagnosisScreen() {
     try {
       await Promise.all([
         saveAnamnesisMutation.mutateAsync(),
-        weight ? saveAnthropometricMutation.mutateAsync() : Promise.resolve(),
+        weight || height
+          ? saveAnthropometricMutation.mutateAsync()
+          : Promise.resolve(),
       ]);
       Alert.alert("Éxito", "Diagnóstico guardado correctamente.");
       queryClient.invalidateQueries({
@@ -314,7 +357,25 @@ export function DiagnosisScreen() {
               onChangeText={setWeight}
             />
           </View>
+          <View style={{ width: Spacing.md }} />
+          <View style={[styles.fieldGroup, { flex: 1 }]}>
+            <Text style={Typography.label}>Estatura (cm)</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="170"
+              placeholderTextColor={Colors.textMuted}
+              keyboardType="numeric"
+              value={height}
+              onChangeText={setHeight}
+            />
+          </View>
         </View>
+
+        {selectedClient && (
+          <Text style={[Typography.caption, { marginBottom: Spacing.md }]}>
+            Sexo: {gender ? GENDER_LABELS[gender] : "No indicado"}
+          </Text>
+        )}
 
         <View style={styles.fieldGroup}>
           <Text style={Typography.label}>Ocupación</Text>
@@ -370,6 +431,37 @@ export function DiagnosisScreen() {
               </TouchableOpacity>
             ))}
           </ScrollView>
+          {!!activityLevel && (
+            <Text style={Typography.caption}>
+              {
+                ACTIVITY_LEVELS.find((l) => l.value === activityLevel)
+                  ?.description
+              }{" "}
+              · factor ×{ACTIVITY_FACTORS[activityLevel]}
+            </Text>
+          )}
+        </View>
+
+        <View style={styles.energyBox}>
+          <Text style={Typography.label}>Gasto calórico estimado</Text>
+          {tdee != null && tmb != null ? (
+            <View style={styles.energyRow}>
+              <View style={{ flex: 1 }}>
+                <Text style={Typography.caption}>TMB (basal)</Text>
+                <Text style={styles.energyValue}>{tmb} kcal</Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={Typography.caption}>Gasto diario (TDEE)</Text>
+                <Text style={[styles.energyValue, { color: Colors.success }]}>
+                  {tdee} kcal
+                </Text>
+              </View>
+            </View>
+          ) : (
+            <Text style={[Typography.caption, { color: Colors.warning }]}>
+              Falta: {missingForEnergy.join(", ")}.
+            </Text>
+          )}
         </View>
 
         <View style={styles.fieldGroup}>
@@ -426,6 +518,9 @@ export function DiagnosisScreen() {
               value={macroProtein}
               onChangeText={setMacroProtein}
             />
+            {macroGrams && (
+              <Text style={Typography.caption}>{macroGrams.protein} g</Text>
+            )}
           </View>
           <View style={{ width: Spacing.sm }} />
           <View style={[styles.fieldGroup, { flex: 1 }]}>
@@ -436,6 +531,9 @@ export function DiagnosisScreen() {
               value={macroCarbs}
               onChangeText={setMacroCarbs}
             />
+            {macroGrams && (
+              <Text style={Typography.caption}>{macroGrams.carbs} g</Text>
+            )}
           </View>
           <View style={{ width: Spacing.sm }} />
           <View style={[styles.fieldGroup, { flex: 1 }]}>
@@ -446,6 +544,9 @@ export function DiagnosisScreen() {
               value={macroFat}
               onChangeText={setMacroFat}
             />
+            {macroGrams && (
+              <Text style={Typography.caption}>{macroGrams.fat} g</Text>
+            )}
           </View>
         </View>
         <Text
@@ -625,6 +726,24 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.md,
     fontSize: 16,
     color: Colors.textPrimary,
+  },
+  energyBox: {
+    backgroundColor: Colors.bg,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    padding: Spacing.md,
+    marginBottom: Spacing.md,
+    gap: Spacing.sm,
+  },
+  energyRow: {
+    flexDirection: "row",
+  },
+  energyValue: {
+    fontSize: 20,
+    fontWeight: "800",
+    color: Colors.textPrimary,
+    marginTop: 2,
   },
   outlineSaveButton: {
     marginTop: Spacing.md,

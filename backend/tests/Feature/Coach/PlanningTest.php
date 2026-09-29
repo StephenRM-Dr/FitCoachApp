@@ -137,5 +137,11 @@ class PlanningTest extends TestCase
             ->getJson("/api/v1/coach/clients/{$client->id}/programs");
         $indexResponse->assertOk();
         $indexResponse->assertJsonPath('0.mesocycles.0.microcycles.0.workout_sessions.0.name', 'Día 1 - Piernas');
+
+        // El listado trae el conteo de ejercicios, no los ejercicios completos
+        // (el detalle se pide aparte y el árbol crecía con cada semana).
+        $listedSession = $indexResponse->json('0.mesocycles.0.microcycles.0.workout_sessions.0');
+        $this->assertSame(count($showResponse->json('session_exercises')), $listedSession['session_exercises_count']);
+        $this->assertArrayNotHasKey('session_exercises', $listedSession);
     }
 }

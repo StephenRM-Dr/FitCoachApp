@@ -15,6 +15,7 @@ class WorkoutSessionResource extends JsonResource
             'name' => $this->name,
             'day_of_week' => $this->day_of_week,
             'session_exercises' => SessionExerciseResource::collection($this->whenLoaded('sessionExercises')),
+            'session_exercises_count' => $this->whenCounted('sessionExercises'),
         ];
     }
 }

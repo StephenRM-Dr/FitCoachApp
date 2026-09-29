@@ -134,7 +134,7 @@ export function CoachSessionPickerScreen() {
                     {session.name}
                   </Text>
                   <Text style={Typography.caption}>
-                    {context} · {session.session_exercises?.length || 0}{" "}
+                    {context} · {session.session_exercises_count ?? 0}{" "}
                     ejercicios
                   </Text>
                 </View>
