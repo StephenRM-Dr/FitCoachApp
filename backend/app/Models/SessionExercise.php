@@ -12,8 +12,14 @@ class SessionExercise extends Model
         'order',
         'target_sets',
         'target_reps',
+        'target_weights',
+        'weight_unit',
         'target_rpe',
         'rest_time_seconds',
+    ];
+
+    protected $casts = [
+        'target_weights' => 'array',
     ];
 
     public function workoutSession()

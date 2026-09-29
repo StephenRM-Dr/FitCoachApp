@@ -11,6 +11,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useRoute } from "@react-navigation/native";
 import { coachService } from "../../services/coachService";
 import { Colors, Spacing, BorderRadius, Typography } from "../../theme";
+import { formatTargetWeights } from "../../types";
 
 export function SessionPreviewScreen() {
   const route = useRoute<any>();
@@ -54,6 +55,12 @@ export function SessionPreviewScreen() {
                 Objetivo: {se.target_sets} x {se.target_reps} @RPE{" "}
                 {se.target_rpe}
               </Text>
+              {!!formatTargetWeights(se.target_weights, se.weight_unit) && (
+                <Text style={Typography.caption}>
+                  Peso aprox.:{" "}
+                  {formatTargetWeights(se.target_weights, se.weight_unit)}
+                </Text>
+              )}
               {se.rest_time_seconds != null && (
                 <Text style={Typography.caption}>
                   Descanso: {se.rest_time_seconds}s

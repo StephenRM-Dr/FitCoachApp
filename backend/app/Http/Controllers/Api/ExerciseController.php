@@ -14,12 +14,30 @@ class ExerciseController extends Controller
 {
     /**
      * @group Catálogo
-     * @unauthenticated
      * Lista de ejercicios
      */
-    public function index()
+    public function index(Request $request)
     {
-        return ExerciseResource::collection(Exercise::all());
+        return ExerciseResource::collection(
+            Exercise::visibleTo($request->user()->id)->orderBy('name')->get()
+        );
+    }
+
+    /**
+     * @group Coach - Catálogo
+     * Crea un ejercicio personalizado. Solo lo ve (y usa) el coach que lo crea.
+     */
+    public function store(Request $request)
+    {
+        $validated = $request->validate([
+            'name' => 'required|string|max:100',
+            'muscle_group' => 'required|string|max:50',
+            'description' => 'nullable|string|max:1000',
+        ]);
+
+        $exercise = Exercise::create([...$validated, 'coach_id' => $request->user()->id]);
+
+        return (new ExerciseResource($exercise))->response()->setStatusCode(201);
     }
 
     /**
@@ -30,6 +48,11 @@ class ExerciseController extends Controller
      */
     public function uploadMedia(Request $request, Exercise $exercise)
     {
+        // Un ejercicio personalizado solo lo puede modificar su creador.
+        if ($exercise->coach_id !== null && $exercise->coach_id !== $request->user()->id) {
+            return response()->json(['message' => 'No tienes acceso a este ejercicio.'], 403);
+        }
+
         $request->validate([
             'image' => 'required|file|mimes:jpeg,png,gif,webp|max:5120',
         ]);
