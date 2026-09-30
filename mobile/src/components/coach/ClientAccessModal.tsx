@@ -285,7 +285,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.bg,
   },
   pillActive: {
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.primaryDark,
     borderColor: Colors.primary,
   },
   pillText: {
@@ -305,7 +305,7 @@ const styles = StyleSheet.create({
     padding: Spacing.sm,
   },
   submit: {
-    backgroundColor: Colors.success,
+    backgroundColor: Colors.successDark,
     paddingVertical: Spacing.base,
     borderRadius: BorderRadius.lg,
     alignItems: "center",

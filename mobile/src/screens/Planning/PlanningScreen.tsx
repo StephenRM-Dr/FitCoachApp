@@ -356,7 +356,7 @@ const styles = StyleSheet.create({
     marginRight: Spacing.sm,
   },
   clientPillActive: {
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.primaryDark,
     borderColor: Colors.primary,
   },
   clientPillText: {

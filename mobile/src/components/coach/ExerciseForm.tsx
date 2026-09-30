@@ -285,7 +285,7 @@ function ChipGroup({
   selected,
   onToggle,
   label,
-  color = Colors.primaryLight,
+  color = Colors.primaryDark,
 }: {
   options: TaxonomyOption[];
   selected: string[];
@@ -313,7 +313,7 @@ function ChipGroup({
             accessibilityRole="radio"
             accessibilityState={{ checked: active }}
           >
-            <Text style={[styles.chipText, active && styles.chipTextActive]}>
+            <Text style={[styles.chipText, active && styles.chipTextOnDark]}>
               {opt.label}
             </Text>
           </TouchableOpacity>
@@ -483,7 +483,9 @@ const styles = StyleSheet.create({
   },
   chipDisabled: { opacity: 0.35 },
   chipText: { color: Colors.textSecondary, fontWeight: "600", fontSize: 13 },
-  // Sobre los rellenos claros (primaryLight y colores de grupo), ≥6.5:1.
+  // Opciones únicas: relleno primaryDark + blanco (5.2:1), como el resto de
+  // píldoras de la app. Músculos: color claro del grupo + textInverse (≥6.5:1).
+  chipTextOnDark: { color: Colors.white },
   chipTextActive: { color: Colors.textInverse },
   groupTitle: {
     fontSize: 11,
@@ -518,7 +520,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     padding: Spacing.md,
     borderRadius: BorderRadius.md,
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.primaryDark,
   },
   cancel: {
     backgroundColor: Colors.bgCard,

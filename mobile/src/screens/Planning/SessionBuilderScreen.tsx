@@ -822,7 +822,7 @@ const styles = StyleSheet.create({
   },
   addButton: {
     flexDirection: "row",
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.primaryDark,
     paddingHorizontal: Spacing.md,
     paddingVertical: 8,
     borderRadius: BorderRadius.md,
@@ -845,7 +845,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.bgCard,
   },
   dayChipActive: {
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.primaryDark,
     borderColor: Colors.primary,
   },
   dayChipText: {
@@ -884,7 +884,7 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   unitOption: { paddingHorizontal: Spacing.md, paddingVertical: 4 },
-  unitOptionActive: { backgroundColor: Colors.primary },
+  unitOptionActive: { backgroundColor: Colors.primaryDark },
   unitOptionText: { color: Colors.textMuted, fontWeight: "700", fontSize: 12 },
   unitOptionTextActive: { color: Colors.white },
   newExerciseButton: {
@@ -922,7 +922,7 @@ const styles = StyleSheet.create({
     bottom: Spacing.lg,
     left: Spacing.lg,
     right: Spacing.lg,
-    backgroundColor: Colors.success,
+    backgroundColor: Colors.successDark,
     flexDirection: "row",
     padding: Spacing.md,
     borderRadius: BorderRadius.lg,

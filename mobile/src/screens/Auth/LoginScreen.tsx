@@ -436,7 +436,7 @@ const styles = StyleSheet.create({
     alignSelf: "flex-end",
   },
   button: {
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.primaryDark,
     paddingVertical: Spacing.base,
     borderRadius: BorderRadius.lg,
     flexDirection: "row",
@@ -506,7 +506,7 @@ const styles = StyleSheet.create({
     backgroundColor: "transparent",
   },
   resetButton: {
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.primaryDark,
   },
   modalButtonText: {
     fontSize: 14,

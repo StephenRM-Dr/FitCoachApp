@@ -397,7 +397,7 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   ctaButton: {
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.primaryDark,
     paddingVertical: Spacing.base,
     borderRadius: BorderRadius.lg,
     alignItems: "center",

@@ -4,7 +4,9 @@
  * Dark theme by default, inspired by the Figma design system.
  */
 export const Colors = {
-  // Primary brand
+  // Primary brand. Para rellenos con texto/icono blanco encima (botones,
+  // chips activos, badges) usa las variantes *Dark: blanco sobre primary,
+  // success o warning no llega a 4.5:1 (3.7, 2.5 y 2.2); sobre las *Dark, ≥5:1.
   primary: "#3b82f6",
   primaryLight: "#60a5fa",
   primaryDark: "#2563eb",
@@ -12,8 +14,10 @@ export const Colors = {
   // Semantic colors
   success: "#10b981",
   successLight: "#34d399",
+  successDark: "#047857",
   warning: "#f59e0b",
   warningLight: "#fbbf24",
+  warningDark: "#b45309",
   danger: "#ef4444",
   dangerLight: "#f87171",
   info: "#06b6d4",

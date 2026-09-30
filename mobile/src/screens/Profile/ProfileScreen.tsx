@@ -296,7 +296,7 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.primaryDark,
     justifyContent: "center",
     alignItems: "center",
   },
@@ -397,7 +397,7 @@ const styles = StyleSheet.create({
   },
   modalCloseButton: {
     marginTop: Spacing.lg,
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.primaryDark,
     paddingVertical: Spacing.sm,
     paddingHorizontal: Spacing.xl,
     borderRadius: BorderRadius.md,
