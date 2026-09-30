@@ -37,6 +37,7 @@ import {
   formatTargetWeights,
 } from "../../types";
 import { buildWeekPlan, dayOfWeekFor } from "../../utils/weekPlan";
+import { ExerciseGuidance } from "../../components/training/ExerciseGuidance";
 
 export const WorkoutScreen = () => {
   const queryClient = useQueryClient();
@@ -365,6 +366,7 @@ export const WorkoutScreen = () => {
 
                   {expandedExerciseId === se.id && (
                     <View style={styles.setsContainer}>
+                      <ExerciseGuidance exercise={se.exercise} />
                       <View style={styles.setsHeader}>
                         <Text style={[styles.setHeaderText, { width: 40 }]}>
                           SET
