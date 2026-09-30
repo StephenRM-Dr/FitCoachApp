@@ -341,13 +341,23 @@ export const LoginScreen = ({ navigation }: any) => {
           </TouchableOpacity>
         </View>
 
-        {/* Register link */}
+        {/* Register link: solo coaches; los asesorados reciben su acceso del coach */}
         <View style={styles.footer}>
-          <Text style={Typography.bodySmall}>¿No tienes cuenta? </Text>
+          <Text style={Typography.bodySmall}>¿Eres coach? </Text>
           <TouchableOpacity onPress={() => navigation.navigate("Register")}>
-            <Text style={[Typography.link, { fontSize: 14 }]}>Regístrate</Text>
+            <Text style={[Typography.link, { fontSize: 14 }]}>
+              Crea tu cuenta
+            </Text>
           </TouchableOpacity>
         </View>
+        <Text
+          style={[
+            Typography.caption,
+            { textAlign: "center", marginTop: Spacing.sm },
+          ]}
+        >
+          Si eres asesorado, pídele tu acceso a tu coach.
+        </Text>
       </ScrollView>
     </KeyboardAvoidingView>
   );

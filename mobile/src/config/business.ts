@@ -21,5 +21,5 @@ export const BUSINESS = {
 } as const;
 
 /** Debe coincidir con backend/config/fitcoach.php → legal_version. */
-export const LEGAL_VERSION = "1.1";
-export const LEGAL_LAST_UPDATED = "29 de septiembre de 2026";
+export const LEGAL_VERSION = "1.2";
+export const LEGAL_LAST_UPDATED = "30 de septiembre de 2026";

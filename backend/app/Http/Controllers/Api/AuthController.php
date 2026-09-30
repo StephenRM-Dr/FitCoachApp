@@ -20,35 +20,25 @@ class AuthController extends Controller
      */
     public function register(Request $request)
     {
+        // El registro público es solo para coaches (con código de invitación).
+        // Las cuentas de asesorado las crea su coach (POST coach/clients).
         $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users',
             'password' => 'required|string|min:8|confirmed',
-            'role' => 'sometimes|in:coach,client',
-            'coach_code' => 'required_if:role,coach|nullable|string',
+            'role' => 'sometimes|in:coach',
+            'coach_code' => 'required|string',
             'gender' => 'required|in:male,female',
             'accept_terms' => 'accepted',
-            'accept_health_data' => 'boolean',
         ]);
 
-        $role = $request->input('role', 'client');
+        $role = 'coach';
+        $expectedCode = config('fitcoach.coach_registration_code');
 
-        // Los datos de salud (anamnesis) son sensibles: los clientes deben
-        // autorizar su tratamiento de forma explícita y separada de los términos.
-        if ($role === 'client' && ! $request->boolean('accept_health_data')) {
+        if (! $expectedCode || ! hash_equals($expectedCode, (string) $request->input('coach_code'))) {
             throw ValidationException::withMessages([
-                'accept_health_data' => ['Debes autorizar el tratamiento de tus datos de salud para usar la app.'],
+                'coach_code' => ['El código de coach no es válido.'],
             ]);
-        }
-
-        if ($role === 'coach') {
-            $expectedCode = config('fitcoach.coach_registration_code');
-
-            if (! $expectedCode || ! hash_equals($expectedCode, (string) $request->input('coach_code'))) {
-                throw ValidationException::withMessages([
-                    'coach_code' => ['El código de coach no es válido.'],
-                ]);
-            }
         }
 
         $user = User::create([
@@ -62,7 +52,6 @@ class AuthController extends Controller
         $user->forceFill([
             'terms_accepted_at' => now(),
             'terms_version' => config('fitcoach.legal_version'),
-            'health_data_consent_at' => $request->boolean('accept_health_data') ? now() : null,
         ])->save();
 
         $token = $user->createToken('auth_token')->plainTextToken;

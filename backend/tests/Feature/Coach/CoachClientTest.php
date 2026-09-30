@@ -5,66 +5,113 @@ namespace Tests\Feature\Coach;
 use App\Models\CoachClient;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
 
 class CoachClientTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_coach_can_assign_an_available_client(): void
+    private function clientPayload(array $overrides = []): array
+    {
+        return array_merge([
+            'name' => 'Ana Pérez',
+            'email' => 'ana@example.com',
+            'gender' => 'female',
+            'password' => 'temporal123',
+        ], $overrides);
+    }
+
+    public function test_coach_creates_client_account_assigned_to_them(): void
+    {
+        $coach = User::factory()->create(['role' => 'coach']);
+
+        $response = $this->actingAs($coach, 'sanctum')
+            ->postJson('/api/v1/coach/clients', $this->clientPayload());
+
+        $response->assertCreated()
+            ->assertJsonPath('role', 'client')
+            ->assertJsonPath('force_password_change', true)
+            ->assertJsonPath('needs_legal_acceptance', true);
+
+        $client = User::where('email', 'ana@example.com')->firstOrFail();
+        $this->assertDatabaseHas('coach_clients', ['coach_id' => $coach->id, 'client_id' => $client->id]);
+        // El consentimiento lo da el asesorado al entrar, nunca el coach.
+        $this->assertNull($client->terms_accepted_at);
+        $this->assertNull($client->health_data_consent_at);
+    }
+
+    public function test_created_client_logs_in_with_temporary_password_and_must_change_it(): void
+    {
+        $coach = User::factory()->create(['role' => 'coach']);
+        $this->actingAs($coach, 'sanctum')
+            ->postJson('/api/v1/coach/clients', $this->clientPayload())
+            ->assertCreated();
+
+        $this->app['auth']->forgetGuards();
+
+        $this->postJson('/api/v1/login', ['email' => 'ana@example.com', 'password' => 'temporal123'])
+            ->assertOk()
+            ->assertJsonPath('user.force_password_change', true);
+    }
+
+    public function test_create_client_validates_email_gender_and_password(): void
+    {
+        $coach = User::factory()->create(['role' => 'coach']);
+        User::factory()->create(['email' => 'ana@example.com']);
+
+        $this->actingAs($coach, 'sanctum')
+            ->postJson('/api/v1/coach/clients', $this->clientPayload(['gender' => 'x', 'password' => 'corta']))
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['email', 'gender', 'password']);
+    }
+
+    public function test_client_cannot_create_client_accounts(): void
+    {
+        $client = User::factory()->create(['role' => 'client']);
+
+        $this->actingAs($client, 'sanctum')
+            ->postJson('/api/v1/coach/clients', $this->clientPayload())
+            ->assertForbidden();
+    }
+
+    public function test_coach_resets_password_of_own_client_and_revokes_sessions(): void
     {
         $coach = User::factory()->create(['role' => 'coach']);
         $client = User::factory()->create(['role' => 'client']);
+        CoachClient::create(['coach_id' => $coach->id, 'client_id' => $client->id]);
+        $client->createToken('auth_token');
 
-        $response = $this->actingAs($coach, 'sanctum')->postJson('/api/v1/coach/assign-client', [
-            'client_id' => $client->id,
-        ]);
+        $this->actingAs($coach, 'sanctum')
+            ->postJson("/api/v1/coach/clients/{$client->id}/password", ['password' => 'nueva12345'])
+            ->assertOk();
 
-        $response->assertCreated();
-        $this->assertTrue(CoachClient::isAssigned($coach->id, $client->id));
+        $client->refresh();
+        $this->assertTrue($client->force_password_change);
+        $this->assertTrue(Hash::check('nueva12345', $client->password));
+        $this->assertSame(0, $client->tokens()->count());
     }
 
-    public function test_coach_cannot_assign_a_client_that_already_has_a_coach(): void
+    public function test_coach_cannot_reset_password_of_another_coachs_client(): void
     {
-        $firstCoach = User::factory()->create(['role' => 'coach']);
-        $secondCoach = User::factory()->create(['role' => 'coach']);
+        $coach = User::factory()->create(['role' => 'coach']);
+        $otherCoach = User::factory()->create(['role' => 'coach']);
         $client = User::factory()->create(['role' => 'client']);
-        CoachClient::create(['coach_id' => $firstCoach->id, 'client_id' => $client->id]);
+        CoachClient::create(['coach_id' => $otherCoach->id, 'client_id' => $client->id]);
 
-        $response = $this->actingAs($secondCoach, 'sanctum')->postJson('/api/v1/coach/assign-client', [
-            'client_id' => $client->id,
-        ]);
-
-        $response->assertStatus(400);
-        $this->assertTrue(CoachClient::isAssigned($firstCoach->id, $client->id));
-        $this->assertFalse(CoachClient::isAssigned($secondCoach->id, $client->id));
+        $this->actingAs($coach, 'sanctum')
+            ->postJson("/api/v1/coach/clients/{$client->id}/password", ['password' => 'nueva12345'])
+            ->assertForbidden();
     }
 
-    public function test_coach_cannot_assign_a_user_that_is_not_a_client(): void
+    public function test_available_clients_listing_no_longer_exists(): void
     {
         $coach = User::factory()->create(['role' => 'coach']);
-        $anotherCoach = User::factory()->create(['role' => 'coach']);
 
-        $response = $this->actingAs($coach, 'sanctum')->postJson('/api/v1/coach/assign-client', [
-            'client_id' => $anotherCoach->id,
-        ]);
-
-        $response->assertStatus(422);
-    }
-
-    public function test_available_clients_excludes_already_assigned_ones(): void
-    {
-        $coach = User::factory()->create(['role' => 'coach']);
-        $assignedClient = User::factory()->create(['role' => 'client']);
-        $availableClient = User::factory()->create(['role' => 'client']);
-        CoachClient::create(['coach_id' => $coach->id, 'client_id' => $assignedClient->id]);
-
-        $response = $this->actingAs($coach, 'sanctum')->getJson('/api/v1/coach/available-clients');
-
-        $response->assertOk();
-        $ids = collect($response->json())->pluck('id');
-        $this->assertTrue($ids->contains($availableClient->id));
-        $this->assertFalse($ids->contains($assignedClient->id));
+        // Exponía nombre y correo de todos los asesorados sin coach a cualquier coach.
+        $this->actingAs($coach, 'sanctum')
+            ->getJson('/api/v1/coach/available-clients')
+            ->assertNotFound();
     }
 
     public function test_coach_only_sees_their_own_clients(): void

@@ -11,14 +11,24 @@ import {
 } from "../types";
 
 export const coachService = {
-  getAvailableClients: async () => {
-    const response = await api.get("/coach/available-clients");
-    return response.data as User[];
+  /**
+   * Crea la cuenta de un asesorado asignada a este coach. La contraseña es
+   * temporal: el asesorado la cambia y acepta los términos al primer ingreso.
+   */
+  createClient: async (data: {
+    name: string;
+    email: string;
+    gender: "male" | "female";
+    password: string;
+  }) => {
+    const response = await api.post("/coach/clients", data);
+    return response.data as User;
   },
 
-  assignClient: async (clientId: number) => {
-    const response = await api.post("/coach/assign-client", {
-      client_id: clientId,
+  /** Nueva contraseña temporal para un asesorado propio (no hay recuperación por correo). */
+  resetClientPassword: async (clientId: number, password: string) => {
+    const response = await api.post(`/coach/clients/${clientId}/password`, {
+      password,
     });
     return response.data;
   },

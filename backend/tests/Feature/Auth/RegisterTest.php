@@ -10,6 +10,12 @@ class RegisterTest extends TestCase
 {
     use RefreshDatabase;
 
+    protected function setUp(): void
+    {
+        parent::setUp();
+        config(['fitcoach.coach_registration_code' => 'CODIGO-COACH']);
+    }
+
     private function validPayload(array $overrides = []): array
     {
         return array_merge([
@@ -18,8 +24,9 @@ class RegisterTest extends TestCase
             'password' => 'password123',
             'password_confirmation' => 'password123',
             'gender' => 'male',
+            'role' => 'coach',
+            'coach_code' => 'CODIGO-COACH',
             'accept_terms' => true,
-            'accept_health_data' => true,
         ], $overrides);
     }
 
@@ -70,13 +77,27 @@ class RegisterTest extends TestCase
             ->assertJsonValidationErrors(['accept_terms']);
     }
 
-    public function test_client_registration_requires_health_data_consent(): void
+    public function test_clients_cannot_self_register(): void
     {
-        $this->postJson('/api/v1/register', $this->validPayload(['accept_health_data' => false]))
+        // Las cuentas de asesorado las crea su coach (POST coach/clients).
+        $this->postJson('/api/v1/register', $this->validPayload(['role' => 'client']))
             ->assertStatus(422)
-            ->assertJsonValidationErrors(['accept_health_data']);
+            ->assertJsonValidationErrors(['role']);
 
         $this->assertDatabaseCount('users', 0);
+    }
+
+    public function test_registration_requires_valid_coach_code(): void
+    {
+        $this->postJson('/api/v1/register', $this->validPayload(['coach_code' => 'otro']))
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['coach_code']);
+
+        $payload = $this->validPayload();
+        unset($payload['coach_code']);
+        $this->postJson('/api/v1/register', $payload)
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['coach_code']);
     }
 
     public function test_registration_stores_consent_evidence(): void
@@ -85,8 +106,8 @@ class RegisterTest extends TestCase
 
         $user = User::where('email', 'juan@example.com')->firstOrFail();
 
+        $this->assertSame('coach', $user->role);
         $this->assertNotNull($user->terms_accepted_at);
-        $this->assertNotNull($user->health_data_consent_at);
         $this->assertSame(config('fitcoach.legal_version'), $user->terms_version);
     }
 }
