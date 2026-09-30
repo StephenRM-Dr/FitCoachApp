@@ -47,3 +47,21 @@ export const Colors = {
 } as const;
 
 export type ColorKey = keyof typeof Colors;
+
+/**
+ * Color de cada grupo muscular amplio del catálogo (mismos grupos que
+ * ExerciseTaxonomy::GROUPS en el backend). Se usa en badges y filtros.
+ */
+export const MuscleGroupColors: Record<string, string> = {
+  Pecho: Colors.primary,
+  Espalda: Colors.purple,
+  Hombros: Colors.orange,
+  Brazos: Colors.info,
+  Piernas: Colors.success,
+  Glúteos: "#ec4899",
+  Core: Colors.warning,
+  Movilidad: "#14b8a6",
+};
+
+export const muscleGroupColor = (group: string | null | undefined) =>
+  (group && MuscleGroupColors[group]) || Colors.textMuted;

@@ -12,6 +12,7 @@ import { useRoute } from "@react-navigation/native";
 import { coachService } from "../../services/coachService";
 import { Colors, Spacing, BorderRadius, Typography } from "../../theme";
 import { formatTargetWeights } from "../../types";
+import { ExerciseGuidance } from "../../components/training/ExerciseGuidance";
 
 export function SessionPreviewScreen() {
   const route = useRoute<any>();
@@ -66,6 +67,10 @@ export function SessionPreviewScreen() {
                   Descanso: {se.rest_time_seconds}s
                 </Text>
               )}
+              <ExerciseGuidance
+                exercise={se.exercise}
+                style={{ marginTop: Spacing.sm, marginBottom: 0 }}
+              />
             </View>
           </View>
         ))}

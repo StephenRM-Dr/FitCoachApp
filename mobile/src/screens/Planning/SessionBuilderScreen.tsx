@@ -17,7 +17,14 @@ import { Plus, Trash2, Save, Search, X, ImagePlus } from "lucide-react-native";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { catalogService } from "../../services/catalogService";
 import { coachService } from "../../services/coachService";
-import { Colors, Spacing, BorderRadius, Typography } from "../../theme";
+import {
+  Colors,
+  Spacing,
+  BorderRadius,
+  Typography,
+  muscleGroupColor,
+} from "../../theme";
+import { ExerciseForm } from "../../components/coach/ExerciseForm";
 import {
   Exercise,
   DayOfWeek,
@@ -56,8 +63,7 @@ export function SessionBuilderScreen({ route, navigation }: any) {
   const [isExerciseModalVisible, setIsExerciseModalVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [isCreatingExercise, setIsCreatingExercise] = useState(false);
-  const [newExerciseName, setNewExerciseName] = useState("");
-  const [newExerciseMuscle, setNewExerciseMuscle] = useState("");
+  const [groupFilter, setGroupFilter] = useState<string | null>(null);
   const [uploadingExerciseId, setUploadingExerciseId] = useState<number | null>(
     null,
   );
@@ -66,6 +72,17 @@ export function SessionBuilderScreen({ route, navigation }: any) {
     queryKey: ["exercises"],
     queryFn: () => catalogService.getExercises(),
   });
+
+  // Vocabulario cerrado (grupos, músculos, patrones…): casi nunca cambia.
+  const { data: taxonomy } = useQuery({
+    queryKey: ["exercise-taxonomy"],
+    queryFn: () => catalogService.getTaxonomy(),
+    staleTime: Infinity,
+  });
+  const labelOf = (
+    list: { key: string; label: string }[] | undefined,
+    key: string | null,
+  ) => (key && list?.find((o) => o.key === key)?.label) || null;
 
   // Modo edición: precarga la sesión ya guardada para poder añadir/quitar
   // ejercicios. La forma local (selectedExercises) reutiliza el mismo shape
@@ -184,34 +201,10 @@ export function SessionBuilderScreen({ route, navigation }: any) {
     onSettled: () => setUploadingExerciseId(null),
   });
 
-  const createExerciseMutation = useMutation({
-    mutationFn: () =>
-      coachService.createExercise({
-        name: newExerciseName.trim(),
-        muscle_group: newExerciseMuscle.trim(),
-      }),
-    onSuccess: (created) => {
-      queryClient.invalidateQueries({ queryKey: ["exercises"] });
-      setNewExerciseName("");
-      setNewExerciseMuscle("");
-      setIsCreatingExercise(false);
-      addExercise(created);
-    },
-    onError: (error: any) => {
-      Alert.alert(
-        "Error",
-        error.response?.data?.message ||
-          "No se pudo crear el ejercicio. Intenta de nuevo.",
-      );
-    },
-  });
-
-  const handleCreateExercise = () => {
-    if (!newExerciseName.trim() || !newExerciseMuscle.trim()) {
-      Alert.alert("Error", "Indica el nombre y el grupo muscular");
-      return;
-    }
-    createExerciseMutation.mutate();
+  const handleExerciseCreated = (created: Exercise) => {
+    queryClient.invalidateQueries({ queryKey: ["exercises"] });
+    setIsCreatingExercise(false);
+    addExercise(created);
   };
 
   const pickAndUploadMedia = async (exerciseId: number) => {
@@ -249,10 +242,13 @@ export function SessionBuilderScreen({ route, navigation }: any) {
     });
   };
 
+  const query = searchQuery.trim().toLowerCase();
   const filteredExercises = exercises.filter(
     (ex) =>
-      ex.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      ex.muscle_group.toLowerCase().includes(searchQuery.toLowerCase()),
+      (!groupFilter || ex.muscle_group === groupFilter) &&
+      (!query ||
+        ex.name.toLowerCase().includes(query) ||
+        ex.muscle_group.toLowerCase().includes(query)),
   );
 
   const addExercise = (ex: Exercise) => {
@@ -549,177 +545,198 @@ export function SessionBuilderScreen({ route, navigation }: any) {
               </TouchableOpacity>
             </View>
 
-            <View style={styles.searchBar}>
-              <Search size={18} color={Colors.textMuted} />
-              <TextInput
-                style={styles.searchInput}
-                placeholder="Buscar por nombre o grupo..."
-                placeholderTextColor={Colors.textMuted}
-                value={searchQuery}
-                onChangeText={setSearchQuery}
+            {isCreatingExercise && taxonomy ? (
+              <ExerciseForm
+                taxonomy={taxonomy}
+                initialName={searchQuery.trim()}
+                onCancel={() => setIsCreatingExercise(false)}
+                onCreated={handleExerciseCreated}
               />
-              {searchQuery.length > 0 && (
-                <TouchableOpacity onPress={() => setSearchQuery("")}>
-                  <X size={16} color={Colors.textMuted} />
-                </TouchableOpacity>
-              )}
-            </View>
-
-            {isCreatingExercise ? (
-              <View style={styles.createForm}>
-                <TextInput
-                  style={styles.input}
-                  value={newExerciseName}
-                  onChangeText={setNewExerciseName}
-                  placeholder="Nombre (ej. Hip Thrust)"
-                  placeholderTextColor={Colors.textMuted}
-                  maxLength={100}
-                />
-                <TextInput
-                  style={styles.input}
-                  value={newExerciseMuscle}
-                  onChangeText={setNewExerciseMuscle}
-                  placeholder="Grupo muscular (ej. Glúteos)"
-                  placeholderTextColor={Colors.textMuted}
-                  maxLength={50}
-                />
-                <View style={styles.createFormActions}>
-                  <TouchableOpacity
-                    style={[styles.createFormButton, styles.createFormCancel]}
-                    onPress={() => setIsCreatingExercise(false)}
-                  >
-                    <Text style={styles.createFormCancelText}>Cancelar</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={styles.createFormButton}
-                    onPress={handleCreateExercise}
-                    disabled={createExerciseMutation.isPending}
-                  >
-                    {createExerciseMutation.isPending ? (
-                      <ActivityIndicator color={Colors.white} />
-                    ) : (
-                      <Text style={styles.addButtonText}>Crear y añadir</Text>
-                    )}
-                  </TouchableOpacity>
+            ) : (
+              <>
+                <View style={styles.searchBar}>
+                  <Search size={18} color={Colors.textMuted} />
+                  <TextInput
+                    style={styles.searchInput}
+                    placeholder="Buscar por nombre o grupo..."
+                    placeholderTextColor={Colors.textMuted}
+                    value={searchQuery}
+                    onChangeText={setSearchQuery}
+                  />
+                  {searchQuery.length > 0 && (
+                    <TouchableOpacity onPress={() => setSearchQuery("")}>
+                      <X size={16} color={Colors.textMuted} />
+                    </TouchableOpacity>
+                  )}
                 </View>
-              </View>
-            ) : (
-              <TouchableOpacity
-                style={styles.newExerciseButton}
-                onPress={() => {
-                  setNewExerciseName(searchQuery);
-                  setIsCreatingExercise(true);
-                }}
-              >
-                <Plus size={18} color={Colors.primary} />
-                <Text style={styles.newExerciseButtonText}>
-                  Crear ejercicio nuevo
-                </Text>
-              </TouchableOpacity>
-            )}
 
-            {loadingExercises ? (
-              <View style={styles.loaderContainer}>
-                <ActivityIndicator size="large" color={Colors.primary} />
-                <Text style={[Typography.caption, { marginTop: 10 }]}>
-                  Cargando biblioteca...
-                </Text>
-              </View>
-            ) : (
-              <ScrollView
-                style={styles.exerciseList}
-                showsVerticalScrollIndicator={false}
-              >
-                {filteredExercises.map((ex) => (
-                  <View key={ex.id} style={styles.exerciseItem}>
-                    {ex.image_url ? (
-                      <Image
-                        source={{ uri: ex.image_url }}
-                        style={styles.exerciseThumbnail}
-                      />
-                    ) : (
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  style={styles.groupFilterRow}
+                  contentContainerStyle={styles.groupFilterContent}
+                >
+                  {[null, ...(taxonomy?.groups ?? [])].map((group) => {
+                    const active = groupFilter === group;
+                    const color = group
+                      ? muscleGroupColor(group)
+                      : Colors.primary;
+                    return (
                       <TouchableOpacity
-                        style={styles.exerciseThumbnailPlaceholder}
-                        onPress={() => pickAndUploadMedia(ex.id)}
-                        disabled={uploadingExerciseId === ex.id}
-                        accessibilityRole="button"
-                        accessibilityLabel={`Subir imagen de referencia para ${ex.name}`}
-                      >
-                        {uploadingExerciseId === ex.id ? (
-                          <ActivityIndicator
-                            size="small"
-                            color={Colors.primary}
-                          />
-                        ) : (
-                          <ImagePlus size={18} color={Colors.textMuted} />
-                        )}
-                      </TouchableOpacity>
-                    )}
-
-                    <TouchableOpacity
-                      style={styles.exerciseMainInfo}
-                      onPress={() => addExercise(ex)}
-                      activeOpacity={0.7}
-                    >
-                      <Text style={styles.exerciseNameText}>{ex.name}</Text>
-                      <View
+                        key={group ?? "all"}
                         style={[
-                          styles.muscleBadge,
-                          {
-                            backgroundColor:
-                              getMuscleColor(ex.muscle_group) + "20",
+                          styles.groupChip,
+                          active && {
+                            backgroundColor: color,
+                            borderColor: color,
                           },
                         ]}
+                        onPress={() => setGroupFilter(group)}
+                        accessibilityRole="button"
+                        accessibilityState={{ selected: active }}
                       >
                         <Text
                           style={[
-                            styles.muscleBadgeText,
-                            { color: getMuscleColor(ex.muscle_group) },
+                            styles.groupChipText,
+                            active && { color: Colors.white },
                           ]}
                         >
-                          {ex.muscle_group}
+                          {group ?? "Todos"}
                         </Text>
-                      </View>
-                    </TouchableOpacity>
-
-                    {ex.image_url && (
-                      <TouchableOpacity
-                        onPress={() => pickAndUploadMedia(ex.id)}
-                        disabled={uploadingExerciseId === ex.id}
-                        accessibilityRole="button"
-                        accessibilityLabel={`Reemplazar imagen de referencia de ${ex.name}`}
-                        style={{ marginRight: Spacing.sm }}
-                      >
-                        {uploadingExerciseId === ex.id ? (
-                          <ActivityIndicator
-                            size="small"
-                            color={Colors.primary}
-                          />
-                        ) : (
-                          <ImagePlus size={16} color={Colors.textMuted} />
-                        )}
                       </TouchableOpacity>
-                    )}
+                    );
+                  })}
+                </ScrollView>
 
-                    <TouchableOpacity
-                      style={styles.addIconContainer}
-                      onPress={() => addExercise(ex)}
-                    >
-                      <Plus size={20} color={Colors.primary} />
-                    </TouchableOpacity>
-                  </View>
-                ))}
+                <TouchableOpacity
+                  style={styles.newExerciseButton}
+                  onPress={() => setIsCreatingExercise(true)}
+                  disabled={!taxonomy}
+                >
+                  <Plus size={18} color={Colors.primary} />
+                  <Text style={styles.newExerciseButtonText}>
+                    Crear ejercicio nuevo
+                  </Text>
+                </TouchableOpacity>
 
-                {filteredExercises.length === 0 && (
-                  <View style={styles.modalEmptyState}>
-                    <Text style={{ color: Colors.textMuted }}>
-                      No se encontraron resultados para &quot;{searchQuery}
-                      &quot;
+                {loadingExercises ? (
+                  <View style={styles.loaderContainer}>
+                    <ActivityIndicator size="large" color={Colors.primary} />
+                    <Text style={[Typography.caption, { marginTop: 10 }]}>
+                      Cargando biblioteca...
                     </Text>
                   </View>
+                ) : (
+                  <ScrollView
+                    style={styles.exerciseList}
+                    showsVerticalScrollIndicator={false}
+                  >
+                    {filteredExercises.map((ex) => (
+                      <View key={ex.id} style={styles.exerciseItem}>
+                        {ex.image_url ? (
+                          <Image
+                            source={{ uri: ex.image_url }}
+                            style={styles.exerciseThumbnail}
+                          />
+                        ) : (
+                          <TouchableOpacity
+                            style={styles.exerciseThumbnailPlaceholder}
+                            onPress={() => pickAndUploadMedia(ex.id)}
+                            disabled={uploadingExerciseId === ex.id}
+                            accessibilityRole="button"
+                            accessibilityLabel={`Subir imagen de referencia para ${ex.name}`}
+                          >
+                            {uploadingExerciseId === ex.id ? (
+                              <ActivityIndicator
+                                size="small"
+                                color={Colors.primary}
+                              />
+                            ) : (
+                              <ImagePlus size={18} color={Colors.textMuted} />
+                            )}
+                          </TouchableOpacity>
+                        )}
+
+                        <TouchableOpacity
+                          style={styles.exerciseMainInfo}
+                          onPress={() => addExercise(ex)}
+                          activeOpacity={0.7}
+                        >
+                          <Text style={styles.exerciseNameText}>{ex.name}</Text>
+                          <View style={styles.exerciseMetaRow}>
+                            <View
+                              style={[
+                                styles.muscleBadge,
+                                {
+                                  backgroundColor:
+                                    muscleGroupColor(ex.muscle_group) + "20",
+                                },
+                              ]}
+                            >
+                              <Text
+                                style={[
+                                  styles.muscleBadgeText,
+                                  { color: muscleGroupColor(ex.muscle_group) },
+                                ]}
+                              >
+                                {ex.muscle_group}
+                              </Text>
+                            </View>
+                            {!!ex.equipment && (
+                              <Text style={Typography.caption}>
+                                {[
+                                  labelOf(taxonomy?.equipment, ex.equipment),
+                                  labelOf(taxonomy?.levels, ex.level) &&
+                                    `Nivel ${labelOf(taxonomy?.levels, ex.level)?.toLowerCase()}`,
+                                ]
+                                  .filter(Boolean)
+                                  .join(" · ")}
+                              </Text>
+                            )}
+                          </View>
+                        </TouchableOpacity>
+
+                        {ex.image_url && (
+                          <TouchableOpacity
+                            onPress={() => pickAndUploadMedia(ex.id)}
+                            disabled={uploadingExerciseId === ex.id}
+                            accessibilityRole="button"
+                            accessibilityLabel={`Reemplazar imagen de referencia de ${ex.name}`}
+                            style={{ marginRight: Spacing.sm }}
+                          >
+                            {uploadingExerciseId === ex.id ? (
+                              <ActivityIndicator
+                                size="small"
+                                color={Colors.primary}
+                              />
+                            ) : (
+                              <ImagePlus size={16} color={Colors.textMuted} />
+                            )}
+                          </TouchableOpacity>
+                        )}
+
+                        <TouchableOpacity
+                          style={styles.addIconContainer}
+                          onPress={() => addExercise(ex)}
+                        >
+                          <Plus size={20} color={Colors.primary} />
+                        </TouchableOpacity>
+                      </View>
+                    ))}
+
+                    {filteredExercises.length === 0 && (
+                      <View style={styles.modalEmptyState}>
+                        <Text style={{ color: Colors.textMuted }}>
+                          {query
+                            ? `No se encontraron resultados para "${searchQuery}"`
+                            : "No hay ejercicios en este grupo."}
+                        </Text>
+                      </View>
+                    )}
+                    <View style={{ height: 40 }} />
+                  </ScrollView>
                 )}
-                <View style={{ height: 40 }} />
-              </ScrollView>
+              </>
             )}
           </View>
         </View>
@@ -829,26 +846,6 @@ const styles = StyleSheet.create({
     borderStyle: "dashed",
   },
   newExerciseButtonText: { color: Colors.primary, fontWeight: "700" },
-  createForm: {
-    marginHorizontal: Spacing.lg,
-    marginBottom: Spacing.md,
-    gap: Spacing.sm,
-  },
-  createFormActions: { flexDirection: "row", gap: Spacing.sm },
-  createFormButton: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    padding: Spacing.md,
-    borderRadius: BorderRadius.md,
-    backgroundColor: Colors.primary,
-  },
-  createFormCancel: {
-    backgroundColor: Colors.bgCard,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  createFormCancelText: { color: Colors.textSecondary, fontWeight: "700" },
   paramGroup: { flex: 1 },
   paramLabel: {
     fontSize: 10,
@@ -980,6 +977,27 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: Colors.textPrimary,
   },
+  groupFilterRow: { flexGrow: 0, marginBottom: Spacing.md },
+  groupFilterContent: { paddingHorizontal: Spacing.lg, gap: Spacing.sm },
+  groupChip: {
+    paddingHorizontal: Spacing.md,
+    paddingVertical: 6,
+    borderRadius: BorderRadius.full,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    backgroundColor: Colors.bgCard,
+  },
+  groupChipText: {
+    color: Colors.textSecondary,
+    fontWeight: "700",
+    fontSize: 13,
+  },
+  exerciseMetaRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "wrap",
+    gap: Spacing.sm,
+  },
   muscleBadge: {
     alignSelf: "flex-start",
     paddingHorizontal: 8,
@@ -1012,15 +1030,3 @@ const styles = StyleSheet.create({
   },
   emptyState: { padding: Spacing.xl, alignItems: "center" },
 });
-
-const getMuscleColor = (group: string) => {
-  const g = group.toLowerCase();
-  if (g.includes("pecho")) return Colors.primary;
-  if (g.includes("espalda")) return Colors.purple;
-  if (g.includes("pierna") || g.includes("isquios") || g.includes("cuadriceps"))
-    return Colors.success;
-  if (g.includes("hombro")) return Colors.orange;
-  if (g.includes("brazo") || g.includes("biceps") || g.includes("triceps"))
-    return Colors.info;
-  return Colors.textMuted;
-};
