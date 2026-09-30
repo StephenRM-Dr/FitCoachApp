@@ -4,7 +4,9 @@
  * Dark theme by default, inspired by the Figma design system.
  */
 export const Colors = {
-  // Primary brand
+  // Primary brand. Para rellenos con texto/icono blanco encima (botones,
+  // chips activos, badges) usa las variantes *Dark: blanco sobre primary,
+  // success o warning no llega a 4.5:1 (3.7, 2.5 y 2.2); sobre las *Dark, ≥5:1.
   primary: "#3b82f6",
   primaryLight: "#60a5fa",
   primaryDark: "#2563eb",
@@ -12,8 +14,10 @@ export const Colors = {
   // Semantic colors
   success: "#10b981",
   successLight: "#34d399",
+  successDark: "#047857",
   warning: "#f59e0b",
   warningLight: "#fbbf24",
+  warningDark: "#b45309",
   danger: "#ef4444",
   dangerLight: "#f87171",
   info: "#06b6d4",
@@ -50,18 +54,24 @@ export type ColorKey = keyof typeof Colors;
 
 /**
  * Color de cada grupo muscular amplio del catálogo (mismos grupos que
- * ExerciseTaxonomy::GROUPS en el backend). Se usa en badges y filtros.
+ * ExerciseTaxonomy::GROUPS en el backend). Son las variantes claras de la
+ * paleta: como relleno de un chip activo llevan texto `textInverse` (≥6.5:1)
+ * y como texto sobre su tinte en una tarjeta pasan 4.5:1. Con texto blanco
+ * encima, varias (ámbar, verde, cian) no llegaban a 3:1.
  */
 export const MuscleGroupColors: Record<string, string> = {
-  Pecho: Colors.primary,
-  Espalda: Colors.purple,
-  Hombros: Colors.orange,
-  Brazos: Colors.info,
-  Piernas: Colors.success,
-  Glúteos: "#ec4899",
-  Core: Colors.warning,
-  Movilidad: "#14b8a6",
+  Pecho: Colors.primaryLight,
+  Espalda: Colors.purpleLight,
+  Hombros: "#fb923c",
+  Brazos: Colors.infoLight,
+  Piernas: Colors.successLight,
+  Glúteos: "#f472b6",
+  Core: Colors.warningLight,
+  Movilidad: "#2dd4bf",
 };
+
+/** Opacidad (hex) del tinte de fondo de un badge de grupo. */
+export const MUSCLE_GROUP_TINT = "1A";
 
 export const muscleGroupColor = (group: string | null | undefined) =>
   (group && MuscleGroupColors[group]) || Colors.textMuted;

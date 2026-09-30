@@ -250,13 +250,13 @@ const styles = StyleSheet.create({
     marginRight: Spacing.sm,
   },
   pillActive: {
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.primaryDark,
     borderColor: Colors.primary,
   },
   pillText: { color: Colors.textSecondary, fontWeight: "600" },
   pillTextActive: { color: Colors.white },
   button: {
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.primaryDark,
     paddingVertical: Spacing.base,
     borderRadius: BorderRadius.lg,
     alignItems: "center",

@@ -531,7 +531,7 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.lg,
   },
   currentExercise: {
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.primaryDark,
     borderRadius: BorderRadius.xl,
     padding: Spacing.lg,
     marginBottom: Spacing.lg,
@@ -787,7 +787,7 @@ const styles = StyleSheet.create({
     borderColor: Colors.border,
   },
   checkButtonActive: {
-    backgroundColor: Colors.success,
+    backgroundColor: Colors.successDark,
     borderColor: Colors.success,
   },
   notesLabel: {
@@ -809,7 +809,7 @@ const styles = StyleSheet.create({
     textAlignVertical: "top",
   },
   finishButton: {
-    backgroundColor: Colors.success,
+    backgroundColor: Colors.successDark,
     paddingVertical: Spacing.base,
     borderRadius: BorderRadius.lg,
     flexDirection: "row",

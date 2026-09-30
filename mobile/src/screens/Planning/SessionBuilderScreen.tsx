@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
   Alert,
   Image,
+  FlatList,
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -23,6 +24,7 @@ import {
   BorderRadius,
   Typography,
   muscleGroupColor,
+  MUSCLE_GROUP_TINT,
 } from "../../theme";
 import { ExerciseForm } from "../../components/coach/ExerciseForm";
 import {
@@ -40,6 +42,9 @@ const toWeightInputs = (weights: number[] | null | undefined): string[] =>
   Array.from({ length: WEIGHT_SLOTS }, (_, i) =>
     weights?.[i] != null ? String(weights[i]) : "",
   );
+
+// Amplía la zona táctil de controles pequeños hasta ~44 pt.
+const HIT_SLOP = { top: 10, bottom: 10, left: 10, right: 10 };
 
 export function SessionBuilderScreen({ route, navigation }: any) {
   const {
@@ -250,6 +255,96 @@ export function SessionBuilderScreen({ route, navigation }: any) {
         ex.name.toLowerCase().includes(query) ||
         ex.muscle_group.toLowerCase().includes(query)),
   );
+
+  const renderCatalogItem = (ex: Exercise) => {
+    const groupColor = muscleGroupColor(ex.muscle_group);
+    const meta = [
+      labelOf(taxonomy?.equipment, ex.equipment),
+      labelOf(taxonomy?.levels, ex.level) &&
+        `Nivel ${labelOf(taxonomy?.levels, ex.level)?.toLowerCase()}`,
+    ]
+      .filter(Boolean)
+      .join(" · ");
+    const isUploading = uploadingExerciseId === ex.id;
+
+    return (
+      <View style={styles.exerciseItem}>
+        {ex.image_url ? (
+          <Image
+            source={{ uri: ex.image_url }}
+            style={styles.exerciseThumbnail}
+            accessibilityIgnoresInvertColors
+          />
+        ) : (
+          <TouchableOpacity
+            style={styles.exerciseThumbnailPlaceholder}
+            onPress={() => pickAndUploadMedia(ex.id)}
+            disabled={isUploading}
+            accessibilityRole="button"
+            accessibilityLabel={`Subir imagen de referencia para ${ex.name}`}
+          >
+            {isUploading ? (
+              <ActivityIndicator size="small" color={Colors.primary} />
+            ) : (
+              <ImagePlus size={18} color={Colors.textMuted} />
+            )}
+          </TouchableOpacity>
+        )}
+
+        <TouchableOpacity
+          style={styles.exerciseMainInfo}
+          onPress={() => addExercise(ex)}
+          activeOpacity={0.7}
+          accessibilityRole="button"
+          accessibilityLabel={`Añadir ${ex.name}, ${ex.muscle_group}${meta ? `, ${meta}` : ""}`}
+        >
+          <Text style={styles.exerciseNameText} numberOfLines={2}>
+            {ex.name}
+          </Text>
+          <View style={styles.exerciseMetaRow}>
+            <View
+              style={[
+                styles.muscleBadge,
+                { backgroundColor: groupColor + MUSCLE_GROUP_TINT },
+              ]}
+            >
+              <Text style={[styles.muscleBadgeText, { color: groupColor }]}>
+                {ex.muscle_group}
+              </Text>
+            </View>
+            {!!meta && <Text style={Typography.caption}>{meta}</Text>}
+          </View>
+        </TouchableOpacity>
+
+        {ex.image_url && (
+          <TouchableOpacity
+            onPress={() => pickAndUploadMedia(ex.id)}
+            disabled={isUploading}
+            hitSlop={HIT_SLOP}
+            accessibilityRole="button"
+            accessibilityLabel={`Reemplazar imagen de referencia de ${ex.name}`}
+            style={{ marginRight: Spacing.md }}
+          >
+            {isUploading ? (
+              <ActivityIndicator size="small" color={Colors.primary} />
+            ) : (
+              <ImagePlus size={16} color={Colors.textMuted} />
+            )}
+          </TouchableOpacity>
+        )}
+
+        <TouchableOpacity
+          style={styles.addIconContainer}
+          onPress={() => addExercise(ex)}
+          hitSlop={HIT_SLOP}
+          accessibilityRole="button"
+          accessibilityLabel={`Añadir ${ex.name}`}
+        >
+          <Plus size={20} color={Colors.primaryLight} />
+        </TouchableOpacity>
+      </View>
+    );
+  };
 
   const addExercise = (ex: Exercise) => {
     setSelectedExercises((current) => [
@@ -527,21 +622,38 @@ export function SessionBuilderScreen({ route, navigation }: any) {
       </TouchableOpacity>
 
       {/* Modal Ejercicios */}
-      <Modal visible={isExerciseModalVisible} animationType="slide" transparent>
+      <Modal
+        visible={isExerciseModalVisible}
+        animationType="slide"
+        transparent
+        // Botón atrás de Android: primero sale del formulario, luego cierra.
+        onRequestClose={() =>
+          isCreatingExercise
+            ? setIsCreatingExercise(false)
+            : setIsExerciseModalVisible(false)
+        }
+      >
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
+          <View style={[styles.modalContent, { paddingBottom: insets.bottom }]}>
             <View style={styles.modalHeader}>
-              <View>
-                <Text style={Typography.h4}>Catálogo</Text>
-                <Text style={[Typography.caption, { color: Colors.textMuted }]}>
-                  Selecciona un ejercicio para añadirlo
+              <View style={{ flex: 1 }}>
+                <Text style={Typography.h4} accessibilityRole="header">
+                  {isCreatingExercise ? "Nuevo ejercicio" : "Catálogo"}
+                </Text>
+                <Text style={Typography.caption}>
+                  {isCreatingExercise
+                    ? "Se añadirá a la sesión al guardarlo"
+                    : "Selecciona un ejercicio para añadirlo"}
                 </Text>
               </View>
               <TouchableOpacity
                 onPress={() => setIsExerciseModalVisible(false)}
                 style={styles.closeButton}
+                hitSlop={HIT_SLOP}
+                accessibilityRole="button"
+                accessibilityLabel="Cerrar catálogo"
               >
-                <X size={24} color={Colors.textPrimary} />
+                <X size={22} color={Colors.textPrimary} />
               </TouchableOpacity>
             </View>
 
@@ -554,188 +666,131 @@ export function SessionBuilderScreen({ route, navigation }: any) {
               />
             ) : (
               <>
-                <View style={styles.searchBar}>
-                  <Search size={18} color={Colors.textMuted} />
-                  <TextInput
-                    style={styles.searchInput}
-                    placeholder="Buscar por nombre o grupo..."
-                    placeholderTextColor={Colors.textMuted}
-                    value={searchQuery}
-                    onChangeText={setSearchQuery}
-                  />
-                  {searchQuery.length > 0 && (
-                    <TouchableOpacity onPress={() => setSearchQuery("")}>
-                      <X size={16} color={Colors.textMuted} />
-                    </TouchableOpacity>
-                  )}
+                {/* Controles fijos: no deben encoger aunque la lista sea larga. */}
+                <View style={styles.catalogControls}>
+                  <View style={styles.searchBar}>
+                    <Search size={18} color={Colors.textMuted} />
+                    <TextInput
+                      style={styles.searchInput}
+                      placeholder="Buscar por nombre o grupo…"
+                      placeholderTextColor={Colors.textMuted}
+                      value={searchQuery}
+                      onChangeText={setSearchQuery}
+                      autoCorrect={false}
+                      returnKeyType="search"
+                      accessibilityLabel="Buscar ejercicio"
+                    />
+                    {searchQuery.length > 0 && (
+                      <TouchableOpacity
+                        onPress={() => setSearchQuery("")}
+                        hitSlop={HIT_SLOP}
+                        accessibilityRole="button"
+                        accessibilityLabel="Borrar búsqueda"
+                      >
+                        <X size={16} color={Colors.textMuted} />
+                      </TouchableOpacity>
+                    )}
+                  </View>
+
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    style={styles.groupFilterRow}
+                    contentContainerStyle={styles.groupFilterContent}
+                    accessibilityRole="radiogroup"
+                    accessibilityLabel="Filtrar por grupo muscular"
+                  >
+                    {[null, ...(taxonomy?.groups ?? [])].map((group) => {
+                      const active = groupFilter === group;
+                      const color = group
+                        ? muscleGroupColor(group)
+                        : Colors.primaryLight;
+                      return (
+                        <TouchableOpacity
+                          key={group ?? "all"}
+                          style={[
+                            styles.groupChip,
+                            active && {
+                              backgroundColor: color,
+                              borderColor: color,
+                            },
+                          ]}
+                          onPress={() => setGroupFilter(group)}
+                          hitSlop={{ top: 4, bottom: 4 }}
+                          accessibilityRole="radio"
+                          accessibilityState={{ checked: active }}
+                        >
+                          <Text
+                            style={[
+                              styles.groupChipText,
+                              active && styles.groupChipTextActive,
+                            ]}
+                          >
+                            {group ?? "Todos"}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </ScrollView>
+
+                  <TouchableOpacity
+                    style={styles.newExerciseButton}
+                    onPress={() => setIsCreatingExercise(true)}
+                    disabled={!taxonomy}
+                    accessibilityRole="button"
+                  >
+                    <Plus size={18} color={Colors.primaryLight} />
+                    <Text style={styles.newExerciseButtonText}>
+                      Crear ejercicio nuevo
+                    </Text>
+                  </TouchableOpacity>
                 </View>
 
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  style={styles.groupFilterRow}
-                  contentContainerStyle={styles.groupFilterContent}
-                >
-                  {[null, ...(taxonomy?.groups ?? [])].map((group) => {
-                    const active = groupFilter === group;
-                    const color = group
-                      ? muscleGroupColor(group)
-                      : Colors.primary;
-                    return (
-                      <TouchableOpacity
-                        key={group ?? "all"}
-                        style={[
-                          styles.groupChip,
-                          active && {
-                            backgroundColor: color,
-                            borderColor: color,
-                          },
-                        ]}
-                        onPress={() => setGroupFilter(group)}
-                        accessibilityRole="button"
-                        accessibilityState={{ selected: active }}
-                      >
-                        <Text
-                          style={[
-                            styles.groupChipText,
-                            active && { color: Colors.white },
-                          ]}
-                        >
-                          {group ?? "Todos"}
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </ScrollView>
-
-                <TouchableOpacity
-                  style={styles.newExerciseButton}
-                  onPress={() => setIsCreatingExercise(true)}
-                  disabled={!taxonomy}
-                >
-                  <Plus size={18} color={Colors.primary} />
-                  <Text style={styles.newExerciseButtonText}>
-                    Crear ejercicio nuevo
-                  </Text>
-                </TouchableOpacity>
-
-                {loadingExercises ? (
-                  <View style={styles.loaderContainer}>
-                    <ActivityIndicator size="large" color={Colors.primary} />
-                    <Text style={[Typography.caption, { marginTop: 10 }]}>
-                      Cargando biblioteca...
-                    </Text>
-                  </View>
-                ) : (
-                  <ScrollView
-                    style={styles.exerciseList}
-                    showsVerticalScrollIndicator={false}
-                  >
-                    {filteredExercises.map((ex) => (
-                      <View key={ex.id} style={styles.exerciseItem}>
-                        {ex.image_url ? (
-                          <Image
-                            source={{ uri: ex.image_url }}
-                            style={styles.exerciseThumbnail}
-                          />
-                        ) : (
-                          <TouchableOpacity
-                            style={styles.exerciseThumbnailPlaceholder}
-                            onPress={() => pickAndUploadMedia(ex.id)}
-                            disabled={uploadingExerciseId === ex.id}
-                            accessibilityRole="button"
-                            accessibilityLabel={`Subir imagen de referencia para ${ex.name}`}
-                          >
-                            {uploadingExerciseId === ex.id ? (
-                              <ActivityIndicator
-                                size="small"
-                                color={Colors.primary}
-                              />
-                            ) : (
-                              <ImagePlus size={18} color={Colors.textMuted} />
-                            )}
-                          </TouchableOpacity>
-                        )}
-
-                        <TouchableOpacity
-                          style={styles.exerciseMainInfo}
-                          onPress={() => addExercise(ex)}
-                          activeOpacity={0.7}
-                        >
-                          <Text style={styles.exerciseNameText}>{ex.name}</Text>
-                          <View style={styles.exerciseMetaRow}>
-                            <View
-                              style={[
-                                styles.muscleBadge,
-                                {
-                                  backgroundColor:
-                                    muscleGroupColor(ex.muscle_group) + "20",
-                                },
-                              ]}
-                            >
-                              <Text
-                                style={[
-                                  styles.muscleBadgeText,
-                                  { color: muscleGroupColor(ex.muscle_group) },
-                                ]}
-                              >
-                                {ex.muscle_group}
-                              </Text>
-                            </View>
-                            {!!ex.equipment && (
-                              <Text style={Typography.caption}>
-                                {[
-                                  labelOf(taxonomy?.equipment, ex.equipment),
-                                  labelOf(taxonomy?.levels, ex.level) &&
-                                    `Nivel ${labelOf(taxonomy?.levels, ex.level)?.toLowerCase()}`,
-                                ]
-                                  .filter(Boolean)
-                                  .join(" · ")}
-                              </Text>
-                            )}
-                          </View>
-                        </TouchableOpacity>
-
-                        {ex.image_url && (
-                          <TouchableOpacity
-                            onPress={() => pickAndUploadMedia(ex.id)}
-                            disabled={uploadingExerciseId === ex.id}
-                            accessibilityRole="button"
-                            accessibilityLabel={`Reemplazar imagen de referencia de ${ex.name}`}
-                            style={{ marginRight: Spacing.sm }}
-                          >
-                            {uploadingExerciseId === ex.id ? (
-                              <ActivityIndicator
-                                size="small"
-                                color={Colors.primary}
-                              />
-                            ) : (
-                              <ImagePlus size={16} color={Colors.textMuted} />
-                            )}
-                          </TouchableOpacity>
-                        )}
-
-                        <TouchableOpacity
-                          style={styles.addIconContainer}
-                          onPress={() => addExercise(ex)}
-                        >
-                          <Plus size={20} color={Colors.primary} />
-                        </TouchableOpacity>
-                      </View>
-                    ))}
-
-                    {filteredExercises.length === 0 && (
+                <FlatList
+                  style={styles.exerciseList}
+                  contentContainerStyle={styles.exerciseListContent}
+                  data={loadingExercises ? [] : filteredExercises}
+                  keyExtractor={(ex) => String(ex.id)}
+                  renderItem={({ item }) => renderCatalogItem(item)}
+                  keyboardShouldPersistTaps="handled"
+                  keyboardDismissMode="on-drag"
+                  initialNumToRender={10}
+                  showsVerticalScrollIndicator={false}
+                  ListEmptyComponent={
+                    loadingExercises ? (
                       <View style={styles.modalEmptyState}>
-                        <Text style={{ color: Colors.textMuted }}>
-                          {query
-                            ? `No se encontraron resultados para "${searchQuery}"`
-                            : "No hay ejercicios en este grupo."}
+                        <ActivityIndicator
+                          size="large"
+                          color={Colors.primary}
+                        />
+                        <Text style={Typography.caption}>
+                          Cargando biblioteca…
                         </Text>
                       </View>
-                    )}
-                    <View style={{ height: 40 }} />
-                  </ScrollView>
-                )}
+                    ) : (
+                      <View style={styles.modalEmptyState}>
+                        <Text style={[Typography.body, styles.emptyText]}>
+                          {query
+                            ? `Ningún ejercicio coincide con “${searchQuery.trim()}”${groupFilter ? ` en ${groupFilter}` : ""}.`
+                            : "No hay ejercicios en este grupo todavía."}
+                        </Text>
+                        <TouchableOpacity
+                          style={styles.emptyAction}
+                          onPress={() => setIsCreatingExercise(true)}
+                          disabled={!taxonomy}
+                          accessibilityRole="button"
+                        >
+                          <Plus size={16} color={Colors.primaryLight} />
+                          <Text style={styles.newExerciseButtonText}>
+                            {query
+                              ? `Crear “${searchQuery.trim()}”`
+                              : "Crear ejercicio"}
+                          </Text>
+                        </TouchableOpacity>
+                      </View>
+                    )
+                  }
+                />
               </>
             )}
           </View>
@@ -767,7 +822,7 @@ const styles = StyleSheet.create({
   },
   addButton: {
     flexDirection: "row",
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.primaryDark,
     paddingHorizontal: Spacing.md,
     paddingVertical: 8,
     borderRadius: BorderRadius.md,
@@ -790,7 +845,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.bgCard,
   },
   dayChipActive: {
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.primaryDark,
     borderColor: Colors.primary,
   },
   dayChipText: {
@@ -829,7 +884,7 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   unitOption: { paddingHorizontal: Spacing.md, paddingVertical: 4 },
-  unitOptionActive: { backgroundColor: Colors.primary },
+  unitOptionActive: { backgroundColor: Colors.primaryDark },
   unitOptionText: { color: Colors.textMuted, fontWeight: "700", fontSize: 12 },
   unitOptionTextActive: { color: Colors.white },
   newExerciseButton: {
@@ -842,10 +897,10 @@ const styles = StyleSheet.create({
     padding: Spacing.md,
     borderRadius: BorderRadius.lg,
     borderWidth: 1,
-    borderColor: Colors.primary,
+    borderColor: Colors.primaryLight,
     borderStyle: "dashed",
   },
-  newExerciseButtonText: { color: Colors.primary, fontWeight: "700" },
+  newExerciseButtonText: { color: Colors.primaryLight, fontWeight: "700" },
   paramGroup: { flex: 1 },
   paramLabel: {
     fontSize: 10,
@@ -867,7 +922,7 @@ const styles = StyleSheet.create({
     bottom: Spacing.lg,
     left: Spacing.lg,
     right: Spacing.lg,
-    backgroundColor: Colors.success,
+    backgroundColor: Colors.successDark,
     flexDirection: "row",
     padding: Spacing.md,
     borderRadius: BorderRadius.lg,
@@ -899,7 +954,7 @@ const styles = StyleSheet.create({
     borderBottomColor: Colors.border,
   },
   closeButton: {
-    padding: 4,
+    padding: 6,
     backgroundColor: Colors.bgElevated,
     borderRadius: 20,
   },
@@ -920,8 +975,10 @@ const styles = StyleSheet.create({
     color: Colors.textPrimary,
     fontSize: 15,
   },
-  exerciseList: {
+  exerciseList: { flex: 1 },
+  exerciseListContent: {
     paddingHorizontal: Spacing.lg,
+    paddingBottom: Spacing.xl,
   },
   exerciseItem: {
     flexDirection: "row",
@@ -977,11 +1034,15 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: Colors.textPrimary,
   },
-  groupFilterRow: { flexGrow: 0, marginBottom: Spacing.md },
+  catalogControls: { flexShrink: 0 },
+  // ScrollView trae flexShrink: 1 por defecto: con una lista larga debajo, el
+  // modal aplastaba la fila de chips en vertical.
+  groupFilterRow: { flexGrow: 0, flexShrink: 0, marginBottom: Spacing.md },
   groupFilterContent: { paddingHorizontal: Spacing.lg, gap: Spacing.sm },
   groupChip: {
+    minHeight: 36,
+    justifyContent: "center",
     paddingHorizontal: Spacing.md,
-    paddingVertical: 6,
     borderRadius: BorderRadius.full,
     borderWidth: 1,
     borderColor: Colors.border,
@@ -990,8 +1051,9 @@ const styles = StyleSheet.create({
   groupChipText: {
     color: Colors.textSecondary,
     fontWeight: "700",
-    fontSize: 13,
+    fontSize: 14,
   },
+  groupChipTextActive: { color: Colors.textInverse },
   exerciseMetaRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -1027,6 +1089,15 @@ const styles = StyleSheet.create({
   modalEmptyState: {
     padding: Spacing.xl,
     alignItems: "center",
+    gap: Spacing.md,
+  },
+  emptyText: { color: Colors.textMuted, textAlign: "center" },
+  emptyAction: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    minHeight: 44,
+    paddingHorizontal: Spacing.md,
   },
   emptyState: { padding: Spacing.xl, alignItems: "center" },
 });

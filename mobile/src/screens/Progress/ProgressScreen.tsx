@@ -330,7 +330,7 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.sm,
   },
   tabActive: {
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.primaryDark,
   },
   tabText: {
     fontSize: 14,

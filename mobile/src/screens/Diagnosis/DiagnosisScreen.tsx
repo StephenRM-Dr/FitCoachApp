@@ -644,7 +644,7 @@ const styles = StyleSheet.create({
   addClientBtn: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.primaryDark,
     paddingHorizontal: Spacing.sm,
     paddingVertical: 4,
     borderRadius: BorderRadius.full,
@@ -711,7 +711,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   saveButton: {
-    backgroundColor: Colors.success,
+    backgroundColor: Colors.successDark,
     paddingVertical: Spacing.base,
     borderRadius: BorderRadius.lg,
     alignItems: "center",
@@ -746,7 +746,7 @@ const styles = StyleSheet.create({
     marginRight: Spacing.sm,
   },
   clientPillActive: {
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.primaryDark,
     borderColor: Colors.primary,
   },
   clientPillText: {
