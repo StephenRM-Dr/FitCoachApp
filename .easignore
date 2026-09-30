@@ -3,3 +3,11 @@ backend/storage/
 backend/public/storage
 backend/bootstrap/cache/
 /src/
+
+# .easignore sustituye a .gitignore en EAS: hay que repetir lo que no debe subirse.
+node_modules/
+# Skills locales de Claude/agentes: contienen symlinks que Windows no puede
+# recrear sin permisos de administrador y no forman parte de la app.
+.claude/
+.agents/
+skills-lock.json
