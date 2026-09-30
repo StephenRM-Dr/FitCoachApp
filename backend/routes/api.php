@@ -56,6 +56,7 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
 
     // Catálogo (ambos roles)
     Route::get('exercises', [ExerciseController::class, 'index']);
+    Route::get('exercises/taxonomy', [ExerciseController::class, 'taxonomy']);
 
     // Coach: gestión de clientes y planificación (periodización)
     Route::prefix('coach')->middleware('role:coach')->group(function () {

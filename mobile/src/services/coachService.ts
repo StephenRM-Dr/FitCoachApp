@@ -6,6 +6,7 @@ import {
   Microcycle,
   WorkoutSession,
   Exercise,
+  NewExercise,
   WeeklyPlan,
   DayOfWeek,
 } from "../types";
@@ -159,11 +160,7 @@ export const coachService = {
   },
 
   /** Crea un ejercicio personalizado (solo visible para este coach). */
-  createExercise: async (data: {
-    name: string;
-    muscle_group: string;
-    description?: string | null;
-  }) => {
+  createExercise: async (data: NewExercise) => {
     const response = await api.post("/coach/exercises", data);
     return response.data as Exercise;
   },

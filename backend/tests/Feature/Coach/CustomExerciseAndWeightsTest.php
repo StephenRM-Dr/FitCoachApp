@@ -44,7 +44,13 @@ class CustomExerciseAndWeightsTest extends TestCase
         Exercise::create(['name' => 'Sentadilla', 'muscle_group' => 'Piernas']);
 
         $this->actingAs($coach, 'sanctum')
-            ->postJson('/api/v1/coach/exercises', ['name' => 'Hip Thrust', 'muscle_group' => 'Glúteos'])
+            ->postJson('/api/v1/coach/exercises', [
+                'name' => 'Hip Thrust',
+                'pattern' => 'bisagra_cadera',
+                'primary_muscles' => ['glúteo'],
+                'equipment' => 'barra',
+                'level' => 'medio',
+            ])
             ->assertCreated()
             ->assertJsonPath('coach_id', $coach->id);
 

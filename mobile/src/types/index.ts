@@ -2,11 +2,47 @@ export interface Exercise {
   id: number;
   /** null = catálogo global; con valor = ejercicio propio de ese coach. */
   coach_id: number | null;
+  slug: string | null;
   name: string;
+  /** Grupo amplio calculado por el backend (Pecho, Espalda, … Movilidad). */
   muscle_group: string;
+  pattern: string | null;
+  primary_muscles: string[];
+  secondary_muscles: string[];
+  equipment: string | null;
+  level: string | null;
+  contraindications: string[];
+  technical_cues: string[];
+  notes: string | null;
   description: string | null;
   video_url: string | null;
   image_url: string | null;
+}
+
+export interface TaxonomyOption {
+  key: string;
+  label: string;
+}
+
+/** Vocabulario cerrado del catálogo (GET exercises/taxonomy). */
+export interface ExerciseTaxonomy {
+  groups: string[];
+  muscles: (TaxonomyOption & { group: string })[];
+  patterns: TaxonomyOption[];
+  equipment: TaxonomyOption[];
+  levels: TaxonomyOption[];
+}
+
+export interface NewExercise {
+  name: string;
+  pattern: string;
+  primary_muscles: string[];
+  secondary_muscles: string[];
+  equipment: string;
+  level: string;
+  contraindications: string[];
+  technical_cues: string[];
+  notes: string | null;
 }
 
 export const DAYS_OF_WEEK = [

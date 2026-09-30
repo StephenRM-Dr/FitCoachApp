@@ -8,10 +8,26 @@ class Exercise extends Model
 {
     protected $fillable = [
         'coach_id',
+        'slug',
         'name',
         'muscle_group',
+        'pattern',
+        'primary_muscles',
+        'secondary_muscles',
+        'equipment',
+        'level',
+        'contraindications',
+        'technical_cues',
+        'notes',
         'description',
         'video_url',
+    ];
+
+    protected $casts = [
+        'primary_muscles' => 'array',
+        'secondary_muscles' => 'array',
+        'contraindications' => 'array',
+        'technical_cues' => 'array',
     ];
 
     /**
