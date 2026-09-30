@@ -10,11 +10,11 @@ interface RegisterData {
   email: string;
   password: string;
   password_confirmation: string;
-  role?: "coach" | "client";
+  // El registro público es solo para coaches: los asesorados los crea su coach.
+  role: "coach";
   gender: "male" | "female";
-  coach_code?: string;
+  coach_code: string;
   accept_terms: boolean;
-  accept_health_data: boolean;
 }
 
 interface AuthResponse {

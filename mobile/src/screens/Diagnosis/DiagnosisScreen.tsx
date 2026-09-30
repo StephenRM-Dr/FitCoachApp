@@ -7,11 +7,10 @@ import {
   TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
-  Modal,
   Alert,
   Switch,
 } from "react-native";
-import { User, Activity, Plus, X, Apple } from "lucide-react-native";
+import { User, Activity, Plus, Apple, KeyRound } from "lucide-react-native";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { coachService } from "../../services/coachService";
 import {
@@ -21,6 +20,7 @@ import {
 import { progressService } from "../../services/progressService";
 import { nutritionService } from "../../services/nutritionService";
 import { Colors, Spacing, BorderRadius, Typography } from "../../theme";
+import { ClientAccessModal } from "../../components/coach/ClientAccessModal";
 import {
   ACTIVITY_FACTORS,
   ACTIVITY_LEVELS,
@@ -33,7 +33,10 @@ const GENDER_LABELS = { male: "Hombre", female: "Mujer" } as const;
 
 export function DiagnosisScreen() {
   const [selectedClientId, setSelectedClientId] = useState<number | null>(null);
-  const [isAssignModalVisible, setIsAssignModalVisible] = useState(false);
+  // Alta de asesorado o nueva contraseña temporal del seleccionado.
+  const [accessModal, setAccessModal] = useState<"create" | "reset" | null>(
+    null,
+  );
   const [age, setAge] = useState("");
   const [weight, setWeight] = useState("");
   const [height, setHeight] = useState("");
@@ -50,29 +53,6 @@ export function DiagnosisScreen() {
   const { data: myClients = [], isLoading } = useQuery({
     queryKey: ["my-clients"],
     queryFn: () => coachService.getMyClients(),
-  });
-
-  // 2. Available clients (not assigned to anyone)
-  const { data: availableClients = [], isLoading: isLoadingAvailable } =
-    useQuery({
-      queryKey: ["available-clients"],
-      queryFn: () => coachService.getAvailableClients(),
-      enabled: isAssignModalVisible, // Only fetch when modal opens
-    });
-
-  // 3. Mutation to assign client
-  const assignClientMutation = useMutation({
-    mutationFn: (clientId: number) => coachService.assignClient(clientId),
-    onSuccess: () => {
-      Alert.alert("Éxito", "Alumno asignado correctamente.");
-      setIsAssignModalVisible(false);
-      // Refresh both lists
-      queryClient.invalidateQueries({ queryKey: ["my-clients"] });
-      queryClient.invalidateQueries({ queryKey: ["available-clients"] });
-    },
-    onError: () => {
-      Alert.alert("Error", "No se pudo asignar el alumno.");
-    },
   });
 
   // 4. Datos de diagnóstico ya guardados del alumno seleccionado
@@ -275,10 +255,10 @@ export function DiagnosisScreen() {
           <Text style={Typography.label}>Seleccionar Alumno</Text>
           <TouchableOpacity
             style={styles.addClientBtn}
-            onPress={() => setIsAssignModalVisible(true)}
+            onPress={() => setAccessModal("create")}
           >
             <Plus size={14} color={Colors.white} />
-            <Text style={styles.addClientBtnText}>Asignar Nuevo</Text>
+            <Text style={styles.addClientBtnText}>Nuevo Asesorado</Text>
           </TouchableOpacity>
         </View>
 
@@ -312,10 +292,22 @@ export function DiagnosisScreen() {
             ))}
             {myClients.length === 0 && (
               <Text style={[Typography.body, { color: Colors.textMuted }]}>
-                No tienes alumnos asignados.
+                Aún no tienes asesorados. Crea el primero con “Nuevo Asesorado”.
               </Text>
             )}
           </ScrollView>
+        )}
+
+        {selectedClient && (
+          <TouchableOpacity
+            style={styles.resetPasswordLink}
+            onPress={() => setAccessModal("reset")}
+          >
+            <KeyRound size={14} color={Colors.primary} />
+            <Text style={styles.resetPasswordText}>
+              Nueva contraseña temporal para {selectedClient.name}
+            </Text>
+          </TouchableOpacity>
         )}
       </View>
 
@@ -597,64 +589,24 @@ export function DiagnosisScreen() {
           </Text>
         )}
       </TouchableOpacity>
-      {/* Assign Client Modal */}
-      <Modal
-        visible={isAssignModalVisible}
-        animationType="slide"
-        transparent={true}
-        onRequestClose={() => setIsAssignModalVisible(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={Typography.h5}>Asignar Nuevo Alumno</Text>
-              <TouchableOpacity onPress={() => setIsAssignModalVisible(false)}>
-                <X size={24} color={Colors.textMuted} />
-              </TouchableOpacity>
-            </View>
-
-            {isLoadingAvailable ? (
-              <ActivityIndicator
-                color={Colors.primary}
-                style={{ marginVertical: Spacing.xl }}
-              />
-            ) : availableClients.length === 0 ? (
-              <Text
-                style={[
-                  Typography.body,
-                  {
-                    color: Colors.textMuted,
-                    textAlign: "center",
-                    marginVertical: Spacing.xl,
-                  },
-                ]}
-              >
-                No hay alumnos disponibles para asignar en este momento.
-              </Text>
-            ) : (
-              <ScrollView style={styles.modalList}>
-                {availableClients.map((client) => (
-                  <View key={client.id} style={styles.availableClientRow}>
-                    <View style={{ flex: 1 }}>
-                      <Text style={[Typography.body, { fontWeight: "600" }]}>
-                        {client.name}
-                      </Text>
-                      <Text style={Typography.caption}>{client.email}</Text>
-                    </View>
-                    <TouchableOpacity
-                      style={styles.assignBtn}
-                      onPress={() => assignClientMutation.mutate(client.id)}
-                      disabled={assignClientMutation.isPending}
-                    >
-                      <Text style={styles.assignBtnText}>Asignar</Text>
-                    </TouchableOpacity>
-                  </View>
-                ))}
-              </ScrollView>
-            )}
-          </View>
-        </View>
-      </Modal>
+      {accessModal === "create" && (
+        <ClientAccessModal
+          mode="create"
+          onClose={() => setAccessModal(null)}
+          onCreated={(client) => {
+            queryClient.invalidateQueries({ queryKey: ["my-clients"] });
+            // Queda seleccionado para seguir con su diagnóstico.
+            setSelectedClientId(client.id);
+          }}
+        />
+      )}
+      {accessModal === "reset" && selectedClient && (
+        <ClientAccessModal
+          mode="reset"
+          client={selectedClient}
+          onClose={() => setAccessModal(null)}
+        />
+      )}
     </ScrollView>
   );
 }
@@ -770,6 +722,17 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 4,
   },
+  resetPasswordLink: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginTop: Spacing.md,
+  },
+  resetPasswordText: {
+    color: Colors.primary,
+    fontWeight: "600",
+    fontSize: 13,
+  },
   clientRow: {
     flexDirection: "row",
   },
@@ -792,45 +755,5 @@ const styles = StyleSheet.create({
   },
   clientPillTextActive: {
     color: Colors.white,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.5)",
-    justifyContent: "flex-end",
-  },
-  modalContent: {
-    backgroundColor: Colors.bgCard,
-    borderTopLeftRadius: BorderRadius.xl,
-    borderTopRightRadius: BorderRadius.xl,
-    padding: Spacing.lg,
-    maxHeight: "80%",
-  },
-  modalHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: Spacing.lg,
-  },
-  modalList: {
-    marginBottom: Spacing.xl,
-  },
-  availableClientRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingVertical: Spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
-  },
-  assignBtn: {
-    backgroundColor: "rgba(16, 185, 129, 0.15)",
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm,
-    borderRadius: BorderRadius.md,
-  },
-  assignBtnText: {
-    color: Colors.success,
-    fontWeight: "600",
-    fontSize: 14,
   },
 });

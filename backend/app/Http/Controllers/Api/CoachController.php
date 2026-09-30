@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Models\CoachClient;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Relación coach ↔ cliente. Los checks de rol los aplica el middleware
@@ -16,45 +17,61 @@ use Illuminate\Http\Request;
 class CoachController extends Controller
 {
     /**
-     * Get all clients that do not have a coach assigned yet.
+     * @group Coach - Asesorados
+     * El coach crea la cuenta de su asesorado y queda asignado a él. La
+     * contraseña que escribe es temporal: al primer ingreso el asesorado
+     * debe cambiarla (force_password_change) y aceptar él mismo los términos
+     * y el tratamiento de sus datos de salud (terms_accepted_at queda null),
+     * porque ese consentimiento no lo puede dar el coach.
      */
-    public function getAvailableClients()
+    public function createClient(Request $request)
     {
-        $availableClients = User::where('role', 'client')
-            ->whereDoesntHave('coachAssignment')
-            ->get();
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'required|string|email|max:255|unique:users',
+            'gender' => 'required|in:male,female',
+            'password' => 'required|string|min:8',
+        ]);
 
-        return UserResource::collection($availableClients);
+        $client = DB::transaction(function () use ($validated, $request) {
+            $client = User::create([...$validated, 'role' => 'client']);
+            $client->forceFill(['force_password_change' => true])->save();
+
+            CoachClient::create([
+                'coach_id' => $request->user()->id,
+                'client_id' => $client->id,
+            ]);
+
+            return $client;
+        });
+
+        return (new UserResource($client))->response()->setStatusCode(201);
     }
 
     /**
-     * Coach assigns a client to themselves.
+     * @group Coach - Asesorados
+     * Asigna una nueva contraseña temporal a un asesorado propio (no hay
+     * recuperación por correo). Cierra sus sesiones abiertas y le obliga a
+     * cambiarla al volver a entrar.
      */
-    public function assignClient(Request $request)
+    public function resetClientPassword(Request $request, User $client)
     {
-        $request->validate([
-            'client_id' => 'required|exists:users,id'
-        ]);
+        $ownsClient = CoachClient::where('coach_id', $request->user()->id)
+            ->where('client_id', $client->id)
+            ->exists();
 
-        $client = User::findOrFail($request->client_id);
-
-        if ($client->role !== 'client') {
-            return response()->json(['error' => 'El usuario indicado no es un asesorado.'], 422);
+        if (! $ownsClient) {
+            return response()->json(['message' => 'No tienes acceso a este asesorado.'], 403);
         }
 
-        if ($client->coachAssignment()->exists()) {
-            return response()->json(['error' => 'El alumno ya tiene un coach asignado.'], 400);
-        }
+        $request->validate(['password' => 'required|string|min:8']);
 
-        $assignment = CoachClient::create([
-            'coach_id' => $request->user()->id,
-            'client_id' => $client->id,
-        ]);
+        $client->password = $request->password;
+        $client->force_password_change = true;
+        $client->save();
+        $client->tokens()->delete();
 
-        return response()->json([
-            'message' => 'Alumno asignado con éxito',
-            'data' => $assignment
-        ], 201);
+        return response()->json(['message' => 'Contraseña temporal actualizada.']);
     }
 
     /**

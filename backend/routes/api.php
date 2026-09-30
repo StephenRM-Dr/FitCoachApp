@@ -59,8 +59,8 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
 
     // Coach: gestión de clientes y planificación (periodización)
     Route::prefix('coach')->middleware('role:coach')->group(function () {
-        Route::get('available-clients', [CoachController::class, 'getAvailableClients']);
-        Route::post('assign-client', [CoachController::class, 'assignClient']);
+        Route::post('clients', [CoachController::class, 'createClient']);
+        Route::post('clients/{client}/password', [CoachController::class, 'resetClientPassword']);
         Route::get('my-clients', [CoachController::class, 'getMyClients']);
 
         Route::post('clients/{clientId}/weekly-plan', [WeeklyPlanController::class, 'ensureCurrent']);

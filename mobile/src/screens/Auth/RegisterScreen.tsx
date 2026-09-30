@@ -30,11 +30,9 @@ export const RegisterScreen = ({ navigation }: any) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [passwordConfirmation, setPasswordConfirmation] = useState("");
-  const [role, setRole] = useState<"coach" | "client">("client");
   const [gender, setGender] = useState<"male" | "female" | "">("");
   const [coachCode, setCoachCode] = useState("");
   const [acceptTerms, setAcceptTerms] = useState(false);
-  const [acceptHealthData, setAcceptHealthData] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const { setAuth, setError, error, clearError } = useAuthStore();
@@ -63,7 +61,7 @@ export const RegisterScreen = ({ navigation }: any) => {
       setError("La contraseña debe tener al menos 8 caracteres.");
       return;
     }
-    if (role === "coach" && !coachCode.trim()) {
+    if (!coachCode.trim()) {
       setError("Ingresa tu código de invitación de coach.");
       return;
     }
@@ -75,10 +73,6 @@ export const RegisterScreen = ({ navigation }: any) => {
       setError("Debes aceptar los Términos y la Política de Privacidad.");
       return;
     }
-    if (role === "client" && !acceptHealthData) {
-      setError("Debes autorizar el tratamiento de tus datos de salud.");
-      return;
-    }
 
     setLoading(true);
     try {
@@ -87,16 +81,12 @@ export const RegisterScreen = ({ navigation }: any) => {
         email: email.trim(),
         password,
         password_confirmation: passwordConfirmation,
-        role,
+        role: "coach",
         gender: gender as "male" | "female",
         accept_terms: acceptTerms,
-        accept_health_data: acceptHealthData,
-        ...(role === "coach" ? { coach_code: coachCode.trim() } : {}),
+        coach_code: coachCode.trim(),
       });
-      setAuth(
-        { ...data.user, role: data.user.role || role },
-        data.access_token,
-      );
+      setAuth(data.user, data.access_token);
     } catch (err: any) {
       const message =
         err.response?.data?.errors?.coach_code?.[0] ||
@@ -175,9 +165,10 @@ export const RegisterScreen = ({ navigation }: any) => {
             style={styles.logo}
             resizeMode="contain"
           />
-          <Text style={Typography.h2}>Crea tu cuenta</Text>
+          <Text style={Typography.h2}>Registro de Coach</Text>
           <Text style={[Typography.bodySmall, { marginTop: Spacing.xs }]}>
-            Únete a FitCoach Pro y comienza tu transformación.
+            Crea tu cuenta de coach. Las cuentas de tus asesorados las creas tú
+            desde la app.
           </Text>
         </View>
 
@@ -188,64 +179,18 @@ export const RegisterScreen = ({ navigation }: any) => {
           </View>
         )}
 
-        {/* Role selector */}
+        {/* Coach code */}
         <View style={styles.roleSection}>
-          <Text style={Typography.label}>¿Cómo usarás FitCoach?</Text>
-          <View style={styles.roleRow}>
-            <TouchableOpacity
-              style={[
-                styles.roleButton,
-                role === "client" && styles.roleButtonActive,
-              ]}
-              onPress={() => setRole("client")}
-              activeOpacity={0.7}
-            >
-              <User
-                size={20}
-                color={role === "client" ? Colors.white : Colors.textSecondary}
-              />
-              <Text
-                style={[
-                  styles.roleText,
-                  role === "client" && styles.roleTextActive,
-                ]}
-              >
-                Asesorado
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[
-                styles.roleButton,
-                role === "coach" && styles.roleButtonActive,
-              ]}
-              onPress={() => setRole("coach")}
-              activeOpacity={0.7}
-            >
-              <ShieldCheck
-                size={20}
-                color={role === "coach" ? Colors.white : Colors.textSecondary}
-              />
-              <Text
-                style={[
-                  styles.roleText,
-                  role === "coach" && styles.roleTextActive,
-                ]}
-              >
-                Coach
-              </Text>
-            </TouchableOpacity>
-          </View>
-          {role === "coach" &&
-            renderInput(
-              <ShieldCheck size={20} color={Colors.textMuted} />,
-              "Código de invitación de Coach",
-              coachCode,
-              setCoachCode,
-              {
-                placeholder: "Código proporcionado por FitCoach",
-                autoCapitalize: "none",
-              },
-            )}
+          {renderInput(
+            <ShieldCheck size={20} color={Colors.textMuted} />,
+            "Código de invitación de Coach",
+            coachCode,
+            setCoachCode,
+            {
+              placeholder: "Código proporcionado por FitCoach",
+              autoCapitalize: "none",
+            },
+          )}
         </View>
 
         {/* Form */}
@@ -359,9 +304,9 @@ export const RegisterScreen = ({ navigation }: any) => {
           <ConsentCheckboxes
             acceptTerms={acceptTerms}
             onChangeTerms={setAcceptTerms}
-            showHealthData={role === "client"}
-            acceptHealthData={acceptHealthData}
-            onChangeHealthData={setAcceptHealthData}
+            showHealthData={false}
+            acceptHealthData={false}
+            onChangeHealthData={() => {}}
             onOpenDocument={(doc) => navigation.navigate("Legal", { doc })}
           />
 

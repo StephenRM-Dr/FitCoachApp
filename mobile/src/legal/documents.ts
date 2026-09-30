@@ -39,6 +39,7 @@ export const PRIVACY_POLICY: LegalDocument = {
       heading: "2. Datos que recopilamos",
       body: [
         "Cuenta: nombre, correo electrónico, contraseña (almacenada cifrada, nunca en texto legible), rol (coach o asesorado) y género.",
+        "Si eres asesorado, tu coach crea tu cuenta y nos proporciona tu nombre, correo, género y una contraseña temporal. Al entrar por primera vez debes cambiar esa contraseña y aceptar tú mismo estos textos y el tratamiento de tus datos de salud; hasta entonces no se trata ningún otro dato tuyo.",
         "Perfil: edad, ocupación, nivel de actividad y objetivo principal (opcionales).",
         "Datos de salud (sensibles, opcionales): patologías, lesiones, cirugías, medicamentos, hábito de fumar y antecedentes familiares.",
         "Mediciones corporales: peso, estatura, cintura, cadera y frecuencia cardíaca en reposo.",
@@ -142,6 +143,7 @@ export const TERMS_OF_USE: LegalDocument = {
       body: [
         "Debes tener 18 años o más y proporcionar información veraz. Eres responsable de mantener la confidencialidad de tu contraseña y de la actividad de tu cuenta.",
         "El registro como coach requiere un código de invitación. Está prohibido usar un código que no te corresponda.",
+        "Las cuentas de asesorado las crea su coach. Al crearlas, el coach declara contar con la autorización de esa persona para darle de alta y compartirle su acceso de forma privada.",
       ],
     },
     {
