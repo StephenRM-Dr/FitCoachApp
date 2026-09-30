@@ -26,6 +26,8 @@ import {
 } from "../../theme";
 
 const MAX_PRIMARY = 4;
+// Chips de 36 pt + 4 arriba/abajo ≈ 44 pt de zona táctil.
+const CHIP_HIT_SLOP = { top: 4, bottom: 4 };
 const MAX_SECONDARY = 6;
 
 interface Props {
@@ -129,9 +131,9 @@ export function ExerciseForm({
       style={styles.container}
       contentContainerStyle={styles.content}
       keyboardShouldPersistTaps="handled"
+      // iOS: desplaza el contenido para que el teclado no tape las notas.
+      automaticallyAdjustKeyboardInsets
     >
-      <Text style={Typography.h5}>Nuevo ejercicio</Text>
-
       <FieldLabel text="Nombre" required />
       <TextInput
         style={styles.input}
@@ -283,7 +285,7 @@ function ChipGroup({
   selected,
   onToggle,
   label,
-  color = Colors.primary,
+  color = Colors.primaryLight,
 }: {
   options: TaxonomyOption[];
   selected: string[];
@@ -292,7 +294,11 @@ function ChipGroup({
   color?: string;
 }) {
   return (
-    <View style={styles.chipWrap} accessibilityLabel={label}>
+    <View
+      style={styles.chipWrap}
+      accessibilityRole="radiogroup"
+      accessibilityLabel={label}
+    >
       {options.map((opt) => {
         const active = selected.includes(opt.key);
         return (
@@ -303,8 +309,9 @@ function ChipGroup({
               active && { backgroundColor: color, borderColor: color },
             ]}
             onPress={() => onToggle(opt.key)}
-            accessibilityRole="button"
-            accessibilityState={{ selected: active }}
+            hitSlop={CHIP_HIT_SLOP}
+            accessibilityRole="radio"
+            accessibilityState={{ checked: active }}
           >
             <Text style={[styles.chipText, active && styles.chipTextActive]}>
               {opt.label}
@@ -361,10 +368,11 @@ function MuscleSelector({
                       ]}
                       onPress={() => onToggle(m.key)}
                       disabled={isDisabled}
-                      accessibilityRole="button"
-                      accessibilityLabel={`${m.label}, músculo ${label}`}
+                      hitSlop={CHIP_HIT_SLOP}
+                      accessibilityRole="checkbox"
+                      accessibilityLabel={`${m.label}, músculo ${label}${isDisabled ? ", ya elegido como primario" : ""}`}
                       accessibilityState={{
-                        selected: active,
+                        checked: active,
                         disabled: isDisabled,
                       }}
                     >
@@ -426,7 +434,7 @@ function TagInput({
           accessibilityRole="button"
           accessibilityLabel={placeholder}
         >
-          <Plus size={18} color={Colors.primary} />
+          <Plus size={18} color={Colors.primaryLight} />
         </TouchableOpacity>
       </View>
       {values.map((value) => (
@@ -465,8 +473,9 @@ const styles = StyleSheet.create({
   notes: { minHeight: 80, textAlignVertical: "top" },
   chipWrap: { flexDirection: "row", flexWrap: "wrap", gap: Spacing.sm },
   chip: {
+    minHeight: 36,
+    justifyContent: "center",
     paddingHorizontal: Spacing.md,
-    paddingVertical: 6,
     borderRadius: BorderRadius.full,
     borderWidth: 1,
     borderColor: Colors.border,
@@ -474,7 +483,8 @@ const styles = StyleSheet.create({
   },
   chipDisabled: { opacity: 0.35 },
   chipText: { color: Colors.textSecondary, fontWeight: "600", fontSize: 13 },
-  chipTextActive: { color: Colors.white },
+  // Sobre los rellenos claros (primaryLight y colores de grupo), ≥6.5:1.
+  chipTextActive: { color: Colors.textInverse },
   groupTitle: {
     fontSize: 11,
     fontWeight: "800",
@@ -483,10 +493,13 @@ const styles = StyleSheet.create({
   },
   tagRow: { flexDirection: "row", alignItems: "center", gap: Spacing.sm },
   tagAdd: {
-    padding: Spacing.md,
+    minWidth: 44,
+    minHeight: 44,
+    alignItems: "center",
+    justifyContent: "center",
     borderRadius: BorderRadius.md,
     borderWidth: 1,
-    borderColor: Colors.primary,
+    borderColor: Colors.primaryLight,
   },
   tag: {
     flexDirection: "row",

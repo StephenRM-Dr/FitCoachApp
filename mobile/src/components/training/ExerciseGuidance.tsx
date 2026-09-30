@@ -35,8 +35,8 @@ export function ExerciseGuidance({
           accessibilityLabel={`Técnica: ${cues.join(". ")}`}
         >
           <View style={styles.titleRow}>
-            <Lightbulb size={14} color={Colors.primary} />
-            <Text style={[styles.title, { color: Colors.primary }]}>
+            <Lightbulb size={14} color={Colors.primaryLight} />
+            <Text style={[styles.title, { color: Colors.primaryLight }]}>
               Técnica
             </Text>
           </View>
@@ -55,8 +55,8 @@ export function ExerciseGuidance({
           accessibilityLabel={`Precauciones: ${cautions.map(humanize).join(". ")}`}
         >
           <View style={styles.titleRow}>
-            <TriangleAlert size={14} color={Colors.warning} />
-            <Text style={[styles.title, { color: Colors.warning }]}>
+            <TriangleAlert size={14} color={Colors.warningLight} />
+            <Text style={[styles.title, { color: Colors.warningLight }]}>
               Precauciones
             </Text>
           </View>
@@ -73,15 +73,19 @@ export function ExerciseGuidance({
 
 const styles = StyleSheet.create({
   container: { gap: Spacing.sm, marginBottom: Spacing.md },
+  // Tinte + borde de 1 px del mismo tono (sin franja lateral de color).
   block: {
-    backgroundColor: Colors.bg,
+    backgroundColor: Colors.primary + "14",
     borderRadius: BorderRadius.md,
-    borderLeftWidth: 3,
-    borderLeftColor: Colors.primary,
-    padding: Spacing.sm,
-    gap: 2,
+    borderWidth: 1,
+    borderColor: Colors.primary + "40",
+    padding: Spacing.md,
+    gap: 4,
   },
-  cautionBlock: { borderLeftColor: Colors.warning },
+  cautionBlock: {
+    backgroundColor: Colors.warning + "14",
+    borderColor: Colors.warning + "40",
+  },
   titleRow: {
     flexDirection: "row",
     alignItems: "center",

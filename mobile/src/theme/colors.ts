@@ -50,18 +50,24 @@ export type ColorKey = keyof typeof Colors;
 
 /**
  * Color de cada grupo muscular amplio del catálogo (mismos grupos que
- * ExerciseTaxonomy::GROUPS en el backend). Se usa en badges y filtros.
+ * ExerciseTaxonomy::GROUPS en el backend). Son las variantes claras de la
+ * paleta: como relleno de un chip activo llevan texto `textInverse` (≥6.5:1)
+ * y como texto sobre su tinte en una tarjeta pasan 4.5:1. Con texto blanco
+ * encima, varias (ámbar, verde, cian) no llegaban a 3:1.
  */
 export const MuscleGroupColors: Record<string, string> = {
-  Pecho: Colors.primary,
-  Espalda: Colors.purple,
-  Hombros: Colors.orange,
-  Brazos: Colors.info,
-  Piernas: Colors.success,
-  Glúteos: "#ec4899",
-  Core: Colors.warning,
-  Movilidad: "#14b8a6",
+  Pecho: Colors.primaryLight,
+  Espalda: Colors.purpleLight,
+  Hombros: "#fb923c",
+  Brazos: Colors.infoLight,
+  Piernas: Colors.successLight,
+  Glúteos: "#f472b6",
+  Core: Colors.warningLight,
+  Movilidad: "#2dd4bf",
 };
+
+/** Opacidad (hex) del tinte de fondo de un badge de grupo. */
+export const MUSCLE_GROUP_TINT = "1A";
 
 export const muscleGroupColor = (group: string | null | undefined) =>
   (group && MuscleGroupColors[group]) || Colors.textMuted;
