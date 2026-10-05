@@ -161,7 +161,11 @@ export const WorkoutScreen = () => {
     },
     onSuccess: () => {
       Alert.alert("¡Excelente!", "Entrenamiento guardado con éxito.");
-      queryClient.invalidateQueries({ queryKey: ["workout-logs"] });
+      // El backend sí lo guarda; esto solo refresca lo que la app ya tiene
+      // en caché. La clave era "workout-logs", que ninguna pantalla
+      // consulta — el Dashboard lee "execution-history" (su "último
+      // entrenamiento" quedaba desactualizado y parecía que no se guardó).
+      queryClient.invalidateQueries({ queryKey: ["execution-history"] });
       setSelectedSessionId(null);
     },
     onError: () => {
