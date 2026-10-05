@@ -26,6 +26,7 @@ import {
   ChevronUp,
   Eye,
   X,
+  CalendarPlus,
 } from "lucide-react-native";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { workoutService } from "../../services/workoutService";
@@ -37,6 +38,7 @@ import {
   formatTargetWeights,
 } from "../../types";
 import { buildWeekPlan, dayOfWeekFor } from "../../utils/weekPlan";
+import { addSessionToDeviceCalendar } from "../../services/calendarService";
 import { ExerciseGuidance } from "../../components/training/ExerciseGuidance";
 
 export const WorkoutScreen = () => {
@@ -56,6 +58,11 @@ export const WorkoutScreen = () => {
   // asesorado toca el ojo. expo-image cachea en disco, así que una vez
   // vista no se vuelve a descargar aunque se cierre y reabra el modal.
   const [previewImageUrl, setPreviewImageUrl] = useState<string | null>(null);
+  // Sesión que se está agregando al calendario del teléfono en este momento
+  // (para mostrar el spinner solo en esa tarjeta).
+  const [calendarSessionId, setCalendarSessionId] = useState<number | null>(
+    null,
+  );
 
   // 1. Obtener programa activo
   const { data: activeProgram, isLoading: loadingProgram } = useQuery({
@@ -179,35 +186,78 @@ export const WorkoutScreen = () => {
     dayOfWeekFor(new Date()),
   );
 
+  // Acción puntual a pedido del usuario, no una sincronización: si el coach
+  // cambia el plan después, no se actualiza sola.
+  const handleAddToCalendar = async (session: WorkoutSession) => {
+    setCalendarSessionId(session.id);
+    const result = await addSessionToDeviceCalendar(session);
+    setCalendarSessionId(null);
+
+    if (result.ok) {
+      Alert.alert("Listo", `"${session.name}" se agregó a tu calendario.`);
+      return;
+    }
+
+    const messages: Record<string, string> = {
+      "no-day": "Esta sesión no tiene un día asignado.",
+      "permission-denied":
+        "Dale permiso de calendario a FitCoach Pro desde los ajustes del teléfono para poder agregar sesiones.",
+      "no-calendar": "No encontramos un calendario editable en tu teléfono.",
+      error: "No se pudo agregar la sesión al calendario. Intenta de nuevo.",
+    };
+    Alert.alert("No se pudo agregar", messages[result.reason]);
+  };
+
   const renderSessionCard = (session: WorkoutSession) => (
-    <TouchableOpacity
+    <View
       key={session.id}
       style={[
         styles.sessionSelectCard,
         session.is_completed && styles.sessionSelectCardDone,
       ]}
-      onPress={() => setSelectedSessionId(session.id)}
-      accessibilityRole="button"
-      accessibilityLabel={
-        session.is_completed
-          ? `${session.name}, ya completada. Volver a abrirla`
-          : `Comenzar ${session.name}`
-      }
     >
-      <View style={{ flex: 1 }}>
-        <Text style={styles.sessionSelectTitle}>{session.name}</Text>
-        <Text style={Typography.caption}>
-          {session.is_completed
-            ? "Completada"
-            : `${session.session_exercises?.length || 0} ejercicios`}
-        </Text>
-      </View>
-      {session.is_completed ? (
-        <CheckCircle size={20} color={Colors.success} />
-      ) : (
-        <Play size={20} color={Colors.primary} />
+      <TouchableOpacity
+        style={styles.sessionSelectMain}
+        onPress={() => setSelectedSessionId(session.id)}
+        activeOpacity={0.7}
+        accessibilityRole="button"
+        accessibilityLabel={
+          session.is_completed
+            ? `${session.name}, ya completada. Volver a abrirla`
+            : `Comenzar ${session.name}`
+        }
+      >
+        <View style={{ flex: 1 }}>
+          <Text style={styles.sessionSelectTitle}>{session.name}</Text>
+          <Text style={Typography.caption}>
+            {session.is_completed
+              ? "Completada"
+              : `${session.session_exercises?.length || 0} ejercicios`}
+          </Text>
+        </View>
+        {session.is_completed ? (
+          <CheckCircle size={20} color={Colors.success} />
+        ) : (
+          <Play size={20} color={Colors.primary} />
+        )}
+      </TouchableOpacity>
+
+      {!!session.day_of_week && (
+        <TouchableOpacity
+          style={styles.calendarButton}
+          onPress={() => handleAddToCalendar(session)}
+          disabled={calendarSessionId === session.id}
+          accessibilityRole="button"
+          accessibilityLabel={`Agregar ${session.name} al calendario del teléfono`}
+        >
+          {calendarSessionId === session.id ? (
+            <ActivityIndicator size="small" color={Colors.textMuted} />
+          ) : (
+            <CalendarPlus size={18} color={Colors.textMuted} />
+          )}
+        </TouchableOpacity>
       )}
-    </TouchableOpacity>
+    </View>
   );
 
   if (loadingProgram) {
@@ -675,6 +725,15 @@ const styles = StyleSheet.create({
   sessionSelectCardDone: {
     borderLeftColor: Colors.success,
     opacity: 0.75,
+  },
+  sessionSelectMain: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  calendarButton: {
+    paddingHorizontal: Spacing.sm,
+    marginLeft: Spacing.sm,
   },
   dayBlock: {
     marginBottom: Spacing.md,

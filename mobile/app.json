@@ -21,7 +21,8 @@
         "backgroundColor": "#18212A"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.anonymous.mobile"
+      "package": "com.anonymous.mobile",
+      "permissions": ["android.permission.READ_CALENDAR", "android.permission.WRITE_CALENDAR"]
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -34,12 +35,24 @@
           "photosPermission": "FitCoach Pro necesita acceso a tus fotos para que puedas subir una imagen o GIF de un ejercicio."
         }
       ],
-      "expo-image"
+      "expo-image",
+      [
+        "expo-calendar",
+        {
+          "calendarPermission": "FitCoach Pro necesita acceso a tu calendario para agregar las sesiones de entrenamiento que elijas."
+        }
+      ]
     ],
     "extra": {
       "eas": {
         "projectId": "f20d91bd-957a-4ac3-ba75-fa390b8d793d"
       }
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/f20d91bd-957a-4ac3-ba75-fa390b8d793d"
     }
   }
 }

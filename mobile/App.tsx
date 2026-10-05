@@ -1,4 +1,6 @@
 import React, { useEffect } from "react";
+import { Alert } from "react-native";
+import * as Updates from "expo-updates";
 import { NavigationContainer } from "@react-navigation/native";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from "react-native-safe-area-context";
@@ -53,6 +55,36 @@ function AppContent() {
         await setAuth(await authService.me(), token);
       } catch {
         // Sin conexión: se sigue con el usuario guardado.
+      }
+    })();
+  }, []);
+
+  // Avisa de actualizaciones OTA (EAS Update): por defecto expo-updates las
+  // descarga en segundo plano y las aplica recién en el siguiente arranque
+  // en frío, sin avisar. Acá se revisa al abrir la app y, si hay una nueva,
+  // se le pregunta al usuario si quiere aplicarla ya (reinicia la app) o
+  // dejarla para después (se aplicará sola la próxima vez que la abra).
+  // No corre en desarrollo: expo-updates no tiene servidor de updates ahí.
+  useEffect(() => {
+    if (__DEV__) return;
+
+    (async () => {
+      try {
+        const { isAvailable } = await Updates.checkForUpdateAsync();
+        if (!isAvailable) return;
+
+        await Updates.fetchUpdateAsync();
+        Alert.alert(
+          "Actualización disponible",
+          "Hay una nueva versión de FitCoach Pro lista para instalar.",
+          [
+            { text: "Más tarde", style: "cancel" },
+            { text: "Reiniciar ahora", onPress: () => Updates.reloadAsync() },
+          ],
+        );
+      } catch {
+        // Sin conexión o falla la revisión: la app sigue funcionando con lo
+        // que ya tiene instalado.
       }
     })();
   }, []);
