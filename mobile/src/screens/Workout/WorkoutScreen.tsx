@@ -182,18 +182,31 @@ export const WorkoutScreen = () => {
   const renderSessionCard = (session: WorkoutSession) => (
     <TouchableOpacity
       key={session.id}
-      style={styles.sessionSelectCard}
+      style={[
+        styles.sessionSelectCard,
+        session.is_completed && styles.sessionSelectCardDone,
+      ]}
       onPress={() => setSelectedSessionId(session.id)}
       accessibilityRole="button"
-      accessibilityLabel={`Comenzar ${session.name}`}
+      accessibilityLabel={
+        session.is_completed
+          ? `${session.name}, ya completada. Volver a abrirla`
+          : `Comenzar ${session.name}`
+      }
     >
       <View style={{ flex: 1 }}>
         <Text style={styles.sessionSelectTitle}>{session.name}</Text>
         <Text style={Typography.caption}>
-          {session.session_exercises?.length || 0} ejercicios
+          {session.is_completed
+            ? "Completada"
+            : `${session.session_exercises?.length || 0} ejercicios`}
         </Text>
       </View>
-      <Play size={20} color={Colors.primary} />
+      {session.is_completed ? (
+        <CheckCircle size={20} color={Colors.success} />
+      ) : (
+        <Play size={20} color={Colors.primary} />
+      )}
     </TouchableOpacity>
   );
 
@@ -658,6 +671,10 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.md,
     borderLeftWidth: 4,
     borderLeftColor: Colors.primary,
+  },
+  sessionSelectCardDone: {
+    borderLeftColor: Colors.success,
+    opacity: 0.75,
   },
   dayBlock: {
     marginBottom: Spacing.md,

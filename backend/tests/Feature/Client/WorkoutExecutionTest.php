@@ -144,6 +144,37 @@ class WorkoutExecutionTest extends TestCase
         );
     }
 
+    public function test_active_program_flags_whether_each_session_was_already_completed(): void
+    {
+        $client = User::factory()->create(['role' => 'client']);
+        [, $session, $exercise] = $this->buildSessionFor($client);
+        $otherSession = WorkoutSession::create([
+            'microcycle_id' => $session->microcycle_id,
+            'name' => 'Día 2 - Torso',
+        ]);
+
+        $beforeResponse = $this->actingAs($client, 'sanctum')->getJson('/api/v1/client/programs/active');
+        $sessionsBefore = $beforeResponse->json('mesocycles.0.microcycles.0.workout_sessions');
+        $byId = collect($sessionsBefore)->keyBy('id');
+        $this->assertFalse($byId[$session->id]['is_completed']);
+        $this->assertNull($byId[$session->id]['last_execution_at']);
+        $this->assertFalse($byId[$otherSession->id]['is_completed']);
+
+        $this->actingAs($client, 'sanctum')->postJson('/api/v1/client/executions', [
+            'workout_session_id' => $session->id,
+            'sets' => [
+                ['exercise_id' => $exercise->id, 'set_number' => 1, 'weight_kg' => 80, 'reps_performed' => 8],
+            ],
+        ])->assertCreated();
+
+        $afterResponse = $this->actingAs($client, 'sanctum')->getJson('/api/v1/client/programs/active');
+        $sessionsAfter = collect($afterResponse->json('mesocycles.0.microcycles.0.workout_sessions'))->keyBy('id');
+        $this->assertTrue($sessionsAfter[$session->id]['is_completed']);
+        $this->assertNotNull($sessionsAfter[$session->id]['last_execution_at']);
+        // La otra sesión del mismo microciclo no debe quedar marcada.
+        $this->assertFalse($sessionsAfter[$otherSession->id]['is_completed']);
+    }
+
     public function test_client_cannot_store_execution_for_a_session_not_theirs(): void
     {
         $client = User::factory()->create(['role' => 'client']);

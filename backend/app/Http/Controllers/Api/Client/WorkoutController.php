@@ -36,6 +36,7 @@ class WorkoutController extends Controller
                 'mesocycles' => fn ($q) => $q->orderByDesc('start_week')->limit(1),
                 'mesocycles.microcycles' => fn ($q) => $q->orderByDesc('week_number')->limit(1),
                 'mesocycles.microcycles.workoutSessions.sessionExercises.exercise',
+                'mesocycles.microcycles.workoutSessions.executions',
             ])
             ->first();
             

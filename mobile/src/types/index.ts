@@ -99,6 +99,9 @@ export interface WorkoutSession {
   session_exercises?: SessionExercise[];
   /** Solo en listados (coach/clients/{id}/programs), en vez de session_exercises. */
   session_exercises_count?: number;
+  /** Solo en el programa activo del cliente (GET /client/programs/active). */
+  is_completed?: boolean;
+  last_execution_at?: string | null;
 }
 
 export interface Microcycle {

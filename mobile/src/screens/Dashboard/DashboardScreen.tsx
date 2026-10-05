@@ -14,6 +14,7 @@ import {
   Dumbbell,
   ChevronRight,
   Users,
+  CheckCircle2,
 } from "lucide-react-native";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigation } from "@react-navigation/native";
@@ -69,35 +70,13 @@ export function DashboardScreen() {
     ? (rpeValues.reduce((a, b) => a + b, 0) / rpeValues.length).toFixed(1)
     : null;
 
+  // "Último entrenamiento" y "Volumen semanal/RPE" no son excluyentes: la
+  // sesión que el asesorado acaba de terminar siempre cae dentro de los
+  // últimos 7 días, así que antes la rama de "Último entrenamiento" (un
+  // else if) quedaba inalcanzable justo después de guardar — parecía que no
+  // se había guardado nada. Ahora coexisten en el mismo card.
   let trainingLoadContent: React.ReactNode;
-  if (recentExecutions.length > 0) {
-    trainingLoadContent = (
-      <View style={styles.statsBox}>
-        <View style={styles.statRow}>
-          <Text style={Typography.bodySmall}>Volumen Semanal</Text>
-          <Text style={[Typography.body, { fontWeight: "700" }]}>
-            {weeklyVolume} series
-          </Text>
-        </View>
-        <View
-          style={[
-            styles.statRow,
-            { borderTopWidth: 1, borderTopColor: Colors.border },
-          ]}
-        >
-          <Text style={Typography.bodySmall}>RPE Promedio</Text>
-          <Text
-            style={[
-              Typography.body,
-              { fontWeight: "700", color: Colors.warning },
-            ]}
-          >
-            {avgRpe ?? "--"}
-          </Text>
-        </View>
-      </View>
-    );
-  } else if (lastExecution) {
+  if (lastExecution) {
     trainingLoadContent = (
       <View style={styles.statsBox}>
         <View style={styles.statRow}>
@@ -129,6 +108,37 @@ export function DashboardScreen() {
               )}
             </Text>
           </View>
+        )}
+        {recentExecutions.length > 0 && (
+          <>
+            <View
+              style={[
+                styles.statRow,
+                { borderTopWidth: 1, borderTopColor: Colors.border },
+              ]}
+            >
+              <Text style={Typography.bodySmall}>Volumen Semanal</Text>
+              <Text style={[Typography.body, { fontWeight: "700" }]}>
+                {weeklyVolume} series
+              </Text>
+            </View>
+            <View
+              style={[
+                styles.statRow,
+                { borderTopWidth: 1, borderTopColor: Colors.border },
+              ]}
+            >
+              <Text style={Typography.bodySmall}>RPE Promedio</Text>
+              <Text
+                style={[
+                  Typography.body,
+                  { fontWeight: "700", color: Colors.warning },
+                ]}
+              >
+                {avgRpe ?? "--"}
+              </Text>
+            </View>
+          </>
         )}
       </View>
     );
@@ -294,8 +304,17 @@ export function DashboardScreen() {
                   activeOpacity={0.7}
                   onPress={() => navigation.navigate("Workout")}
                 >
-                  <View style={styles.sessionIcon}>
-                    <Dumbbell size={18} color={Colors.primary} />
+                  <View
+                    style={[
+                      styles.sessionIcon,
+                      session.is_completed && styles.sessionIconDone,
+                    ]}
+                  >
+                    {session.is_completed ? (
+                      <CheckCircle2 size={18} color={Colors.success} />
+                    ) : (
+                      <Dumbbell size={18} color={Colors.primary} />
+                    )}
                   </View>
                   <View style={styles.sessionInfo}>
                     <Text
@@ -307,9 +326,11 @@ export function DashboardScreen() {
                       {session.name}
                     </Text>
                     <Text style={Typography.caption}>
-                      {(session.day_of_week &&
-                        DAY_OF_WEEK_LABELS[session.day_of_week]) ||
-                        "Día flexible"}
+                      {session.is_completed
+                        ? "Completada"
+                        : (session.day_of_week &&
+                            DAY_OF_WEEK_LABELS[session.day_of_week]) ||
+                          "Día flexible"}
                     </Text>
                   </View>
                   <ChevronRight size={18} color={Colors.textMuted} />
@@ -391,6 +412,9 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     marginRight: Spacing.md,
+  },
+  sessionIconDone: {
+    backgroundColor: "rgba(16, 185, 129, 0.15)",
   },
   sessionInfo: {
     flex: 1,
