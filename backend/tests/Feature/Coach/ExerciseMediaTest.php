@@ -41,6 +41,23 @@ class ExerciseMediaTest extends TestCase
         Storage::disk('public')->assertExists($exercise->image_url);
     }
 
+    public function test_coach_can_upload_a_video_loop_for_a_catalog_exercise(): void
+    {
+        // Los "GIFs" del catálogo suelen ser en realidad videos .mp4 (mismo
+        // efecto visual, mucho más livianos que un GIF real).
+        $coach = User::factory()->create(['role' => 'coach']);
+        $exercise = Exercise::create(['name' => 'Sentadilla', 'muscle_group' => 'piernas']);
+        $file = UploadedFile::fake()->create('sentadilla.mp4', 3000, 'video/mp4');
+
+        $response = $this->actingAs($coach, 'sanctum')
+            ->postJson("/api/v1/coach/exercises/{$exercise->id}/media", ['image' => $file]);
+
+        $response->assertOk();
+        $exercise->refresh();
+        $this->assertStringEndsWith('.mp4', $exercise->image_url);
+        Storage::disk('public')->assertExists($exercise->image_url);
+    }
+
     public function test_client_cannot_upload_exercise_media(): void
     {
         $client = User::factory()->create(['role' => 'client']);
@@ -57,7 +74,7 @@ class ExerciseMediaTest extends TestCase
     {
         $coach = User::factory()->create(['role' => 'coach']);
         $exercise = Exercise::create(['name' => 'Sentadilla', 'muscle_group' => 'piernas']);
-        $file = UploadedFile::fake()->image('sentadilla.gif')->size(6000); // 6MB > 5MB
+        $file = UploadedFile::fake()->create('sentadilla.mp4', 21000, 'video/mp4'); // 21MB > 20MB
 
         $response = $this->actingAs($coach, 'sanctum')
             ->postJson("/api/v1/coach/exercises/{$exercise->id}/media", ['image' => $file]);

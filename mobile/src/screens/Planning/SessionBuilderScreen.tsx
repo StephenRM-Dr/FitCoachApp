@@ -9,7 +9,6 @@ import {
   Modal,
   ActivityIndicator,
   Alert,
-  Image,
   FlatList,
   KeyboardAvoidingView,
   Platform,
@@ -29,6 +28,7 @@ import {
   MUSCLE_GROUP_TINT,
 } from "../../theme";
 import { ExerciseForm } from "../../components/coach/ExerciseForm";
+import { ExerciseMedia } from "../../components/training/ExerciseMedia";
 import {
   Exercise,
   DayOfWeek,
@@ -227,13 +227,14 @@ export function SessionBuilderScreen({ route, navigation }: any) {
     if (!permission.granted) {
       Alert.alert(
         "Permiso necesario",
-        "Necesitamos acceso a tus fotos para subir la imagen del ejercicio.",
+        "Necesitamos acceso a tus fotos y videos para subir la referencia del ejercicio.",
       );
       return;
     }
 
+    // Muchos "GIFs" de referencia son en realidad videos .mp4.
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ["images"],
+      mediaTypes: ["images", "videos"],
       quality: 1,
       allowsEditing: false,
     });
@@ -280,11 +281,7 @@ export function SessionBuilderScreen({ route, navigation }: any) {
     return (
       <View style={styles.exerciseItem}>
         {ex.image_url ? (
-          <Image
-            source={{ uri: ex.image_url }}
-            style={styles.exerciseThumbnail}
-            accessibilityIgnoresInvertColors
-          />
+          <ExerciseMedia uri={ex.image_url} style={styles.exerciseThumbnail} />
         ) : (
           <TouchableOpacity
             style={styles.exerciseThumbnailPlaceholder}
@@ -495,8 +492,8 @@ export function SessionBuilderScreen({ route, navigation }: any) {
           <View key={index} style={styles.exerciseCard}>
             <View style={styles.cardHeader}>
               {ex.image_url ? (
-                <Image
-                  source={{ uri: ex.image_url }}
+                <ExerciseMedia
+                  uri={ex.image_url}
                   style={styles.exerciseThumbnailSmall}
                 />
               ) : (

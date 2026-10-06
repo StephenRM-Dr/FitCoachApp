@@ -22,7 +22,10 @@
       },
       "edgeToEdgeEnabled": true,
       "package": "com.anonymous.mobile",
-      "permissions": ["android.permission.READ_CALENDAR", "android.permission.WRITE_CALENDAR"]
+      "permissions": [
+        "android.permission.READ_CALENDAR",
+        "android.permission.WRITE_CALENDAR"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -41,7 +44,8 @@
         {
           "calendarPermission": "FitCoach Pro necesita acceso a tu calendario para agregar las sesiones de entrenamiento que elijas."
         }
-      ]
+      ],
+      "expo-video"
     ],
     "extra": {
       "eas": {

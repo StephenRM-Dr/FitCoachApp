@@ -108,7 +108,11 @@ class ExerciseController extends Controller
         }
 
         $request->validate([
-            'image' => 'required|file|mimes:jpeg,png,gif,webp|max:5120',
+            // "GIF" aquí incluye .mp4: muchas referencias de ejercicio son en
+            // realidad videos en loop (mismo efecto visual, mucho más
+            // livianos que un GIF real). 20 MB cubre un clip corto sin
+            // comprimir demasiado.
+            'image' => 'required|file|mimes:jpeg,png,gif,webp,mp4|max:20480',
         ]);
 
         // Se guarda solo la ruta relativa al disco 'public', no la URL

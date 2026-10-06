@@ -15,7 +15,7 @@ import {
   Keyboard,
   Modal,
 } from "react-native";
-import { Image } from "expo-image";
+import { ExerciseMedia } from "../../components/training/ExerciseMedia";
 import {
   Play,
   Dumbbell,
@@ -559,12 +559,10 @@ export const WorkoutScreen = () => {
             <X size={24} color={Colors.white} />
           </TouchableOpacity>
           {previewImageUrl && (
-            <Image
-              source={{ uri: previewImageUrl }}
+            <ExerciseMedia
+              uri={previewImageUrl}
               style={styles.imagePreview}
               contentFit="contain"
-              cachePolicy="disk"
-              transition={150}
             />
           )}
         </View>
