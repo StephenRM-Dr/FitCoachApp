@@ -20,6 +20,9 @@ class SessionExerciseResource extends JsonResource
             'weight_unit' => $this->weight_unit ?? 'kg',
             'target_rpe' => $this->target_rpe,
             'rest_time_seconds' => $this->rest_time_seconds,
+            // Indicaciones del coach para el asesorado (no confundir con las
+            // notas que el asesorado escribe sobre su propia ejecución).
+            'notes' => $this->notes,
             'exercise' => new ExerciseResource($this->whenLoaded('exercise')),
         ];
     }

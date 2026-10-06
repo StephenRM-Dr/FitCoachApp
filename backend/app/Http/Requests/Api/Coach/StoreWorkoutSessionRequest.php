@@ -38,6 +38,9 @@ class StoreWorkoutSessionRequest extends FormRequest
             'exercises.*.weight_unit' => 'nullable|in:kg,lb',
             'exercises.*.target_rpe' => 'nullable|integer',
             'exercises.*.rest_time_seconds' => 'nullable|integer',
+            // Indicaciones del coach para el asesorado sobre este ejercicio
+            // (técnica, cadencia, qué cuidar). Se sanea antes de guardar.
+            'exercises.*.notes' => 'nullable|string|max:1000',
         ];
     }
 }

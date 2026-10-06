@@ -7,6 +7,7 @@ use App\Http\Resources\WorkoutSessionResource;
 
 use App\Models\WorkoutSession;
 use App\Models\Microcycle;
+use App\Services\TextCleaner;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -121,6 +122,7 @@ class WorkoutSessionController extends Controller
                 'weight_unit' => $exData['weight_unit'] ?? 'kg',
                 'target_rpe' => $exData['target_rpe'] ?? null,
                 'rest_time_seconds' => $exData['rest_time_seconds'] ?? null,
+                'notes' => isset($exData['notes']) ? (TextCleaner::sanitize($exData['notes']) ?: null) : null,
             ];
         })->all();
     }

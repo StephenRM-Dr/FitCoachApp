@@ -410,6 +410,11 @@ export const WorkoutScreen = () => {
                             </Text>
                           </View>
                         )}
+                        {/* Indicación del coach: siempre visible, sin tener
+                            que expandir la tarjeta para verla. */}
+                        {!!se.notes && (
+                          <Text style={styles.coachNoteText}>{se.notes}</Text>
+                        )}
                       </View>
                       {expandedExerciseId === se.id ? (
                         <ChevronUp size={20} color={Colors.textMuted} />
@@ -815,6 +820,15 @@ const styles = StyleSheet.create({
   restText: {
     color: Colors.textMuted,
     fontSize: 11,
+  },
+  coachNoteText: {
+    color: Colors.textSecondary,
+    fontSize: 12,
+    fontStyle: "italic",
+    marginTop: 4,
+    paddingLeft: Spacing.sm,
+    borderLeftWidth: 2,
+    borderLeftColor: Colors.primary,
   },
   setsContainer: {
     paddingHorizontal: Spacing.md,

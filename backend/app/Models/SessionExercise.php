@@ -16,6 +16,7 @@ class SessionExercise extends Model
         'weight_unit',
         'target_rpe',
         'rest_time_seconds',
+        'notes',
     ];
 
     protected $casts = [

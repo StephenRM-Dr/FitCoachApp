@@ -88,6 +88,8 @@ export interface SessionExercise {
   weight_unit: WeightUnit;
   target_rpe: number | null;
   rest_time_seconds: number | null;
+  /** Indicaciones del coach para el asesorado sobre este ejercicio. */
+  notes?: string | null;
   exercise?: Exercise;
 }
 

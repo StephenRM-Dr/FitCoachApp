@@ -67,6 +67,9 @@ export function SessionPreviewScreen() {
                   Descanso: {se.rest_time_seconds}s
                 </Text>
               )}
+              {!!se.notes && (
+                <Text style={styles.coachNoteText}>{se.notes}</Text>
+              )}
               <ExerciseGuidance
                 exercise={se.exercise}
                 style={{ marginTop: Spacing.sm, marginBottom: 0 }}
@@ -133,5 +136,14 @@ const styles = StyleSheet.create({
     color: Colors.white,
     fontSize: 16,
     fontWeight: "700",
+  },
+  coachNoteText: {
+    color: Colors.textSecondary,
+    fontSize: 12,
+    fontStyle: "italic",
+    marginTop: 4,
+    paddingLeft: Spacing.sm,
+    borderLeftWidth: 2,
+    borderLeftColor: Colors.primary,
   },
 });

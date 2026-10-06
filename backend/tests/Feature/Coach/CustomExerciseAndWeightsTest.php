@@ -122,4 +122,55 @@ class CustomExerciseAndWeightsTest extends TestCase
             ->assertStatus(422)
             ->assertJsonValidationErrors(['exercises.0.target_weights', 'exercises.0.weight_unit']);
     }
+
+    public function test_session_stores_a_sanitized_note_per_exercise(): void
+    {
+        [$coach, $microcycle] = $this->coachWithMicrocycle();
+        $exercise = Exercise::create(['name' => 'Sentadilla', 'muscle_group' => 'Piernas']);
+
+        $response = $this->actingAs($coach, 'sanctum')
+            ->postJson("/api/v1/coach/microcycles/{$microcycle->id}/sessions", [
+                'name' => 'Piernas',
+                'exercises' => [[
+                    'exercise_id' => $exercise->id,
+                    'notes' => "  Bajar lento,   pausa de 1s abajo. <b>importante</b>  ",
+                ]],
+            ]);
+
+        $response->assertCreated()->assertJsonPath(
+            'session_exercises.0.notes',
+            'Bajar lento, pausa de 1s abajo. importante',
+        );
+    }
+
+    public function test_exercise_note_is_optional_and_defaults_to_null(): void
+    {
+        [$coach, $microcycle] = $this->coachWithMicrocycle();
+        $exercise = Exercise::create(['name' => 'Sentadilla', 'muscle_group' => 'Piernas']);
+
+        $response = $this->actingAs($coach, 'sanctum')
+            ->postJson("/api/v1/coach/microcycles/{$microcycle->id}/sessions", [
+                'name' => 'Piernas',
+                'exercises' => [['exercise_id' => $exercise->id]],
+            ]);
+
+        $response->assertCreated()->assertJsonPath('session_exercises.0.notes', null);
+    }
+
+    public function test_exercise_note_has_a_max_length(): void
+    {
+        [$coach, $microcycle] = $this->coachWithMicrocycle();
+        $exercise = Exercise::create(['name' => 'Sentadilla', 'muscle_group' => 'Piernas']);
+
+        $this->actingAs($coach, 'sanctum')
+            ->postJson("/api/v1/coach/microcycles/{$microcycle->id}/sessions", [
+                'name' => 'Piernas',
+                'exercises' => [[
+                    'exercise_id' => $exercise->id,
+                    'notes' => str_repeat('a', 1001),
+                ]],
+            ])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('exercises.0.notes');
+    }
 }

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import {
   View,
   Text,
@@ -11,6 +11,8 @@ import {
   Alert,
   Image,
   FlatList,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -72,6 +74,13 @@ export function SessionBuilderScreen({ route, navigation }: any) {
   const [uploadingExerciseId, setUploadingExerciseId] = useState<number | null>(
     null,
   );
+  // Al añadir un ejercicio, la tarjeta nueva queda fuera de la vista (al
+  // final de una lista que puede ser larga) y había que desplazarse a mano
+  // para editarla. Se marca el pedido acá y se resuelve en onContentSizeChange
+  // del ScrollView, cuando la tarjeta nueva ya está realmente renderizada
+  // (más confiable que un setTimeout a ciegas).
+  const scrollViewRef = useRef<ScrollView>(null);
+  const [pendingScrollToEnd, setPendingScrollToEnd] = useState(false);
 
   const { data: exercises = [], isLoading: loadingExercises } = useQuery({
     queryKey: ["exercises"],
@@ -117,6 +126,7 @@ export function SessionBuilderScreen({ route, navigation }: any) {
         weight_unit: se.weight_unit ?? "kg",
         target_rpe: se.target_rpe ?? 0,
         rest_time_seconds: se.rest_time_seconds ?? 0,
+        notes: se.notes ?? "",
       })),
     );
   }
@@ -358,9 +368,11 @@ export function SessionBuilderScreen({ route, navigation }: any) {
         weight_unit: "kg" as WeightUnit,
         target_rpe: 8,
         rest_time_seconds: 90,
+        notes: "",
       },
     ]);
     setIsExerciseModalVisible(false);
+    setPendingScrollToEnd(true);
   };
 
   const removeExercise = (index: number) => {
@@ -397,6 +409,7 @@ export function SessionBuilderScreen({ route, navigation }: any) {
         weight_unit: ex.weight_unit,
         target_rpe: parseInt(String(ex.target_rpe)) || 0,
         rest_time_seconds: parseInt(String(ex.rest_time_seconds)) || 0,
+        notes: (ex.notes as string)?.trim() || null,
       })),
     });
   };
@@ -410,12 +423,24 @@ export function SessionBuilderScreen({ route, navigation }: any) {
   }
 
   return (
-    <View style={styles.container}>
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      keyboardVerticalOffset={Platform.OS === "ios" ? 100 : 20}
+    >
       <ScrollView
+        ref={scrollViewRef}
         contentContainerStyle={[
           styles.content,
           { paddingBottom: 100 + insets.bottom },
         ]}
+        keyboardShouldPersistTaps="handled"
+        onContentSizeChange={() => {
+          if (pendingScrollToEnd) {
+            scrollViewRef.current?.scrollToEnd({ animated: true });
+            setPendingScrollToEnd(false);
+          }
+        }}
       >
         <View style={styles.section}>
           <Text style={Typography.label}>Nombre de la Sesión</Text>
@@ -591,6 +616,22 @@ export function SessionBuilderScreen({ route, navigation }: any) {
                   }
                 />
               </View>
+            </View>
+
+            <View style={{ marginTop: Spacing.md }}>
+              <Text style={styles.paramLabel}>
+                Indicaciones para el asesorado
+              </Text>
+              <TextInput
+                style={styles.notesInput}
+                value={ex.notes}
+                onChangeText={(v) => updateExerciseData(index, "notes", v)}
+                placeholder="Ej. Bajar lento, codos pegados al cuerpo…"
+                placeholderTextColor={Colors.textMuted}
+                multiline
+                numberOfLines={2}
+                maxLength={1000}
+              />
             </View>
           </View>
         ))}
@@ -796,7 +837,7 @@ export function SessionBuilderScreen({ route, navigation }: any) {
           </View>
         </View>
       </Modal>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -914,6 +955,17 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.sm,
     padding: 8,
     textAlign: "center",
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  notesInput: {
+    backgroundColor: Colors.bg,
+    color: Colors.white,
+    borderRadius: BorderRadius.sm,
+    padding: Spacing.sm,
+    marginTop: Spacing.xs,
+    minHeight: 56,
+    textAlignVertical: "top",
     borderWidth: 1,
     borderColor: Colors.border,
   },

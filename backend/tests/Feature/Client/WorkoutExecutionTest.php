@@ -66,6 +66,24 @@ class WorkoutExecutionTest extends TestCase
         $this->assertSame('null', $otherResponse->getContent());
     }
 
+    public function test_client_sees_the_coachs_note_on_an_exercise(): void
+    {
+        $client = User::factory()->create(['role' => 'client']);
+        [, $session, $exercise] = $this->buildSessionFor($client);
+        $session->sessionExercises()->create([
+            'exercise_id' => $exercise->id,
+            'order' => 2,
+            'notes' => 'Codos pegados al cuerpo todo el recorrido.',
+        ]);
+
+        $response = $this->actingAs($client, 'sanctum')
+            ->getJson("/api/v1/client/sessions/{$session->id}");
+
+        $response->assertOk();
+        $notes = collect($response->json('session_exercises'))->pluck('notes');
+        $this->assertContains('Codos pegados al cuerpo todo el recorrido.', $notes);
+    }
+
     public function test_client_cannot_open_a_session_from_another_clients_program(): void
     {
         $client = User::factory()->create(['role' => 'client']);
