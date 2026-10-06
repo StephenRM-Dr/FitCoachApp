@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\CoachController;
 use App\Http\Controllers\Api\ExerciseController;
+use App\Http\Controllers\Api\MessageController;
 use App\Http\Controllers\Api\Coach\ProgramController;
 use App\Http\Controllers\Api\Coach\MesocycleController;
 use App\Http\Controllers\Api\Coach\MicrocycleController;
@@ -57,6 +58,10 @@ Route::prefix('v1')->middleware('auth:sanctum')->group(function () {
     // Catálogo (ambos roles)
     Route::get('exercises', [ExerciseController::class, 'index']);
     Route::get('exercises/taxonomy', [ExerciseController::class, 'taxonomy']);
+
+    // Mensajería coach-alumno (simétrica: cada rol resuelve su contraparte en el controlador)
+    Route::get('messages', [MessageController::class, 'index']);
+    Route::post('messages', [MessageController::class, 'store']);
 
     // Coach: gestión de clientes y planificación (periodización)
     Route::prefix('coach')->middleware('role:coach')->group(function () {
