@@ -139,7 +139,12 @@ export default function App() {
           maxAge: DAY_MS,
           buster: CACHE_VERSION,
           dehydrateOptions: {
-            shouldDehydrateQuery: (query) => query.state.status === "success",
+            // Los mensajes del chat se excluyen: un feed que se rehidrata
+            // desde disco en cada arranque en frío mostraría burbujas
+            // viejas antes de que llegue el primer poll.
+            shouldDehydrateQuery: (query) =>
+              query.state.status === "success" &&
+              query.queryKey[0] !== "messages",
           },
         }}
       >

@@ -163,3 +163,12 @@ export interface WeeklyPlan {
   mesocycle_id: number;
   microcycle: Microcycle;
 }
+
+export interface Message {
+  id: number;
+  coach_id: number;
+  client_id: number;
+  sender_id: number;
+  body: string;
+  created_at: string;
+}

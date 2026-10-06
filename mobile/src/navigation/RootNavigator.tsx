@@ -42,6 +42,7 @@ import { AppearanceScreen } from "../screens/Profile/AppearanceScreen";
 import { LegalAcceptanceScreen } from "../screens/Auth/LegalAcceptanceScreen";
 import { LegalScreen } from "../screens/Legal/LegalScreen";
 import { HelpSupportScreen } from "../screens/Profile/HelpSupportScreen";
+import { ChatScreen } from "../screens/Chat/ChatScreen";
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -298,6 +299,11 @@ export const RootNavigator = () => {
             name="HelpSupport"
             component={HelpSupportScreen}
             options={{ headerShown: true, title: "Ayuda y Soporte" }}
+          />
+          <Stack.Screen
+            name="Chat"
+            component={ChatScreen}
+            options={{ headerShown: true, title: "Chat" }}
           />
         </>
       )}

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -15,6 +15,7 @@ import {
   ChevronRight,
   Users,
   CheckCircle2,
+  MessageCircle,
 } from "lucide-react-native";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigation } from "@react-navigation/native";
@@ -28,6 +29,13 @@ export function DashboardScreen() {
   const user = useAuthStore((state) => state.user);
   const navigation = useNavigation<any>();
   const isCoach = user?.role === "coach";
+  const [chatClientId, setChatClientId] = useState<number | null>(null);
+
+  const { data: myCoach } = useQuery({
+    queryKey: ["my-coach"],
+    queryFn: () => coachService.getMyCoach(),
+    enabled: !isCoach,
+  });
 
   const { data: activeProgram } = useQuery({
     queryKey: ["active-program"],
@@ -223,6 +231,59 @@ export function DashboardScreen() {
             )}
           </View>
 
+          {myClients.length > 0 && (
+            <View style={styles.card}>
+              <View style={styles.cardHeader}>
+                <MessageCircle color={Colors.info} size={20} />
+                <Text style={[Typography.h5, { marginLeft: Spacing.sm }]}>
+                  Chat
+                </Text>
+              </View>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                style={styles.clientRow}
+              >
+                {myClients.map((client) => (
+                  <TouchableOpacity
+                    key={client.id}
+                    style={[
+                      styles.clientPill,
+                      chatClientId === client.id && styles.clientPillActive,
+                    ]}
+                    onPress={() => setChatClientId(client.id)}
+                  >
+                    <Text
+                      style={[
+                        styles.clientPillText,
+                        chatClientId === client.id &&
+                          styles.clientPillTextActive,
+                      ]}
+                    >
+                      {client.name}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+              <TouchableOpacity
+                style={[
+                  styles.ctaButton,
+                  { marginTop: Spacing.md },
+                  !chatClientId && styles.ctaButtonDisabled,
+                ]}
+                activeOpacity={0.8}
+                disabled={!chatClientId}
+                onPress={() =>
+                  navigation.navigate("Chat", { clientId: chatClientId })
+                }
+              >
+                <Text style={[Typography.buttonText, { color: Colors.white }]}>
+                  Enviar mensaje
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
           <TouchableOpacity
             style={styles.ctaButton}
             activeOpacity={0.8}
@@ -266,6 +327,29 @@ export function DashboardScreen() {
               </Text>
             </View>
           </View>
+
+          {/* Mi Entrenador */}
+          <TouchableOpacity
+            style={[styles.card, styles.coachCard]}
+            activeOpacity={0.7}
+            disabled={!myCoach}
+            onPress={() => navigation.navigate("Chat")}
+          >
+            <View style={styles.coachAvatar}>
+              <Text style={styles.coachAvatarText}>
+                {myCoach?.name?.charAt(0)?.toUpperCase() || "C"}
+              </Text>
+            </View>
+            <View style={styles.sessionInfo}>
+              <Text style={[Typography.body, { fontWeight: "600" }]}>
+                {myCoach ? myCoach.name : "Sin coach asignado"}
+              </Text>
+              <Text style={Typography.caption}>
+                {myCoach ? "Tu entrenador" : "Espera a ser asignado"}
+              </Text>
+            </View>
+            {myCoach && <MessageCircle size={20} color={Colors.info} />}
+          </TouchableOpacity>
 
           {/* Training Load */}
           <View style={styles.card}>
@@ -430,5 +514,51 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 4,
+  },
+  ctaButtonDisabled: {
+    backgroundColor: Colors.bgElevated,
+    shadowOpacity: 0,
+    elevation: 0,
+  },
+  clientRow: {
+    flexDirection: "row",
+  },
+  clientPill: {
+    backgroundColor: Colors.bg,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    borderRadius: BorderRadius.full,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    marginRight: Spacing.sm,
+  },
+  clientPillActive: {
+    backgroundColor: Colors.primaryDark,
+    borderColor: Colors.primary,
+  },
+  clientPillText: {
+    color: Colors.textSecondary,
+    fontWeight: "600",
+  },
+  clientPillTextActive: {
+    color: Colors.white,
+  },
+  coachCard: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  coachAvatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: Colors.warning,
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: Spacing.md,
+  },
+  coachAvatarText: {
+    fontSize: 20,
+    fontWeight: "800",
+    color: Colors.textInverse,
   },
 });
